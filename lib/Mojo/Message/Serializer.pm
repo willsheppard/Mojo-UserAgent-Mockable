@@ -110,15 +110,21 @@ Serialize an instance of L<Mojo::Message> and write it to the given file or file
 arguments:
 
 =for :list
-= $message
-Instance of L<Mojo::Message> to serialize
 = $file 
 File or handle to write serialized object to.
+= $message
+Instance of L<Mojo::Message> to serialize
  
 =method retrieve
 
 Read from the specified file or file handle and deserialize an instance of L<Mojo::Message> from 
-the data read.  If a file handle is passed, data will be read until an EOF is received.
+the data read.  If a file handle is passed, data will be read until an EOF is received. Arguments:
+
+=for :list
+= $file
+File containing serialized object
+= %subscriptions
+Hash of events to subscribe to on the deserialized object.  See L<Mojo::EventEmitter/on>.
 
 =cut
 
@@ -178,7 +184,7 @@ sub deserialize {
 }
 
 sub store {
-    my ($self, $message, $file) = @_;
+    my ($self, $file, $message) = @_;
 
     my $serialized = $self->serialize($message);
     write_file($file, $serialized);
