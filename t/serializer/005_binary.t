@@ -4,10 +4,10 @@ use FindBin qw($Bin);
 use File::Compare qw(compare);
 use File::Spec;
 use Test::Most;
-use Mojo::Message::Serializer;
+use Mojo::UserAgent::Mockable::Serializer;
 use Mojolicious;
 
-my $serializer = Mojo::Message::Serializer->new;
+my $serializer = Mojo::UserAgent::Mockable::Serializer->new;
 my $file = qq{$Bin/../files/sample resume.docx};
 
 my $action = sub {
@@ -25,15 +25,15 @@ $app->routes->any(
 );
 my $ua = $app->ua;
 my $tx = $ua->get('/download');
-my $serialized = $serializer->serialize($tx->res);
+my $serialized = $serializer->serialize($tx);
 $tx = undef;
 $app = undef;
 
 my $dir = File::Temp->newdir;
 my $download = qq{$dir/sample_resume.docx};
 
-my $res2 = $serializer->deserialize($serialized);
-$res2->content->asset->move_to($download);
+my ($tx2) = $serializer->deserialize($serialized);
+$tx2->res->content->asset->move_to($download);
 
 is compare($download, $file), 0, 'Binary files copied properly';
 done_testing;

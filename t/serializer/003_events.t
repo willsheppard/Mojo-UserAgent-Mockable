@@ -1,53 +1,111 @@
 use 5.014;
 use File::Temp;
 use Test::Most;
-use Test::JSON;
 use Mojo::JSON;
-use Mojo::Message::Serializer;
-use Mojo::Message::Request;
-use Mojo::Message::Response;
+use Mojo::UserAgent::Mockable::Serializer;
 use Mojo::UserAgent;
 use Mojolicious::Quick;
 
-my $serializer = Mojo::Message::Serializer->new;
-my $req        = Mojo::Message::Request->new;
-my $cookie     = 'foo=bar';
-$req->parse("PUT /upload HTTP/1.1\x0d\x0aCookie: $cookie; sessionID=OU812\x0d\x0a");
-$req->parse("Content-Length: 0\x0d\x0a\x0d\x0a");
+my $app = Mojolicious::Quick->new(
+    [   '/foo' => sub {
+            shift->render( text => 'OK' );
+        }
+    ]
+);
 
+my $serializer = Mojo::UserAgent::Mockable::Serializer->new;
+my $tx = $app->ua->get('/foo');
 my %events;
-$req->on(
+$tx->on(
     pre_freeze => sub {
-        my ($message) = @_;
-        isa_ok( $message, 'Mojo::Message::Request' );
+        my ($txn) = @_;
+        isa_ok( $txn, 'Mojo::Transaction::HTTP' );
         $events{'pre_freeze'} = 1;
     }
 );
-$req->on(
+$tx->req->on(
+    pre_freeze => sub {
+        my ($req) = @_;
+        isa_ok( $req, 'Mojo::Message::Request' );
+        $events{'req_pre_freeze'} = 1;
+    }
+);
+$tx->req->on(
     post_freeze => sub {
-        my ( $message, $slush ) = @_;
-        isa_ok( $message, 'Mojo::Message::Request' );
+        my ($req) = @_;
+        isa_ok( $req, 'Mojo::Message::Request' );
+        $events{'req_post_freeze'} = 1;
+    }
+);
+$tx->on(
+    post_freeze => sub {
+        my ( $txn, $slush ) = @_;
+        isa_ok( $txn, 'Mojo::Transaction::HTTP' );
         is ref $slush, 'HASH', 'slush is a hashref';
-        is $slush->{'class'}, 'Mojo::Message::Request', 'Class correct';
+        is $slush->{'class'}, 'Mojo::Transaction::HTTP', 'Class correct';
         $events{'post_freeze'} = 1;
     }
 );
-
+$tx->res->on(
+    pre_freeze => sub {
+        my ($res) = @_;
+        isa_ok( $res, 'Mojo::Message::Response' );
+        $events{'res_pre_freeze'} = 1;
+    }
+);
+$tx->res->on(
+    post_freeze => sub {
+        my ($res) = @_;
+        isa_ok( $res, 'Mojo::Message::Response' );
+        $events{'res_post_freeze'} = 1;
+    }
+);
+$tx->on(
+    resume => sub {
+        $events{'resume'} = 1;
+    }
+);
 my $serialized;
-lives_ok { $serialized = $serializer->serialize($req); } 'Serialize() did not die';
-$req = undef;
+lives_ok { $serialized = $serializer->serialize($tx); } 'Serialize() did not die';
+$tx = undef;
+my $decoded = Mojo::JSON::decode_json($serialized);
+
+my @transaction_events = @{$decoded->[0]{'events'}} if defined $decoded->[0]{'events'};
+
+$serializer->on(
+    pre_thaw => sub {
+        my ( $serializer, $slush ) = @_;
+        isa_ok( $serializer, 'Mojo::UserAgent::Mockable::Serializer' );
+        is ref $slush, 'ARRAY', 'slush is an arrayref';
+        $events{'pre_thaw'} = 1;
+    }
+);
+$serializer->on(
+    post_thaw => sub {
+        my ( $serializer, $transactions, $slush ) = @_;
+        isa_ok( $serializer, 'Mojo::UserAgent::Mockable::Serializer' );
+        is ref $transactions, 'ARRAY', q{transactions in arrayref};
+        is ref $slush,        'ARRAY',  'slush is an arrayref';
+        $events{'post_thaw'} = 1;
+    }
+);
+
+($tx) = $serializer->deserialize( $serialized);
 
 my @expected_events = qw/
-    pre_freeze post_freeze thaw finish progress
+    pre_thaw        post_thaw       pre_freeze      post_freeze
+    req_pre_freeze  req_post_freeze res_pre_freeze  res_post_freeze
     /;
-my %subscriptions = map {
-    my $event = $_;
-    $event => sub { $events{$event} = 1; }
-} @expected_events;
-
-my $r2 = $serializer->deserialize( $serialized, %subscriptions );
+push @expected_events, @transaction_events;
 
 for my $event (@expected_events) {
+    if ($event eq 'resume') {
+        TODO: { 
+            local $TODO = 'Events at individual transaction level not yet supported';
+            is $events{$event}, 1, qq{Event "$event" fired};
+        };
+        next;
+    }
     is $events{$event}, 1, qq{Event "$event" fired};
 }
 done_testing;

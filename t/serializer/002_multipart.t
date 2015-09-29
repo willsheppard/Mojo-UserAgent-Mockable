@@ -1,21 +1,19 @@
 use 5.014;
-use File::Temp;
 use Test::Most;
 use Test::JSON;
 use Mojo::JSON;
-use Mojo::Message::Serializer;
-use Mojo::Message::Request;
-use Mojo::Message::Response;
-use Mojo::UserAgent;
+use Mojo::UserAgent::Mockable::Serializer;
 use Mojolicious::Quick;
-
-my $serializer = Mojo::Message::Serializer->new;
+use Safe::Isa qw($_isa);
+my $serializer = Mojo::UserAgent::Mockable::Serializer->new;
 
 my $app = Mojolicious::Quick->new(
-    [   '/target' => sub {
-            my $c = shift;
-            $c->render('OK');
-        }
+    [   POST => [
+            '/target' => sub {
+                my $c = shift;
+                $c->render( text => 'Zip zop zoobity bop' );
+            }
+        ]
     ]
 );
 my $ua = $app->ua;
@@ -26,34 +24,29 @@ my $tx = $ua->post(
         'Cookie'                            => 'foo=bar; sessionID=OU812; datingMyself=yes',
     } => form => { foo => 'bar', quux => 'quuy', thefile => { file => q{/Users/kipeters/Documents/sample.txt} } }
 );
-
+BAIL_OUT 'App did not respond properly' unless $tx->res->body eq 'Zip zop zoobity bop';
 my %headers = %{ $tx->req->headers->to_hash };
 my @assets  = map { $_->asset->slurp } @{ $tx->req->content->parts };
 my $url     = $tx->req->url;
 
-my $serialized = $serializer->serialize( $tx->req );
+my $serialized;
+lives_ok { $serialized = $serializer->serialize($tx); } q{serialize() did not die};
+is_valid_json $serialized, 'serialize() emits valid JSON';
 $tx = undef;
+is ref Mojo::JSON::decode_json($serialized), 'ARRAY', q{Single TX serialized as an array};
 
-my $req2 = $serializer->deserialize($serialized);
+lives_ok { ($tx) = $serializer->deserialize($serialized); } q{deserialize() did not die};
 
-subtest 'headers match both ways' => sub {
-    for my $key ( keys %headers ) {
-        my $expected_header = $headers{$key};
-        my $got_header      = $req2->headers->header($key);
-        is( $got_header, $expected_header, qq{Header '$key' OK} );
-    }
-    for my $key ( keys %{ $req2->headers->to_hash } ) {
-        my $got_header      = $headers{$key};
-        my $expected_header = $req2->headers->header($key);
-        is( $got_header, $expected_header, qq{Header '$key' OK} );
-    }
-};
+BAIL_OUT 'No TX' unless $tx;
+BAIL_OUT 'Invalid TX' unless $tx->$_isa('Mojo::Transaction');
+my $req = $tx->req;
+is_deeply( $tx->req->headers->to_hash, \%headers, q{Headers match} );
 
-is( $req2->url->path, $url->path, 'path match' );
+is( $tx->req->url->path, $url->path, 'path match' );
 
-is( scalar @{ $req2->content->parts }, scalar @assets, q{Asset count matches} );
-for ( 0 .. $#{ $req2->content->parts } ) {
-    my $got      = $req2->content->parts->[$_]->asset->slurp;
+is( scalar @{ $req->content->parts }, scalar @assets, q{Asset count matches} );
+for ( 0 .. $#{ $req->content->parts } ) {
+    my $got      = $req->content->parts->[$_]->asset->slurp;
     my $expected = $assets[$_];
     is $got, $expected, qq{Chunk $_ matches};
 }
