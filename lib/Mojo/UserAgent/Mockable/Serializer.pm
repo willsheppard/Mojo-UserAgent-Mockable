@@ -210,6 +210,9 @@ sub _serialize_message {
         class => ref $message,
         body  => $message->to_string,
     };
+    if ($message->can('url')) {
+        $slush->{'url'} = $message->url->to_string;
+    }
     for my $event ( keys %{ $message->{'events'} } ) {
         next if $event eq 'pre_freeze' or $event eq 'post_freeze';
         carp(qq{Subscriber for event "$event" not serialized}) if warnings::enabled;
@@ -296,6 +299,9 @@ sub _deserialize_message {
 
     load_class($slush->{'class'});
     my $obj = $slush->{'class'}->new;
+    if ($slush->{'url'} && $obj->can('url')) {
+        $obj->url(Mojo::URL->new($slush->{'url'}));
+    }
     if (!$obj->can('parse')) {
         die qq{Messages must define the 'parse' method\n};
     }

@@ -4,6 +4,7 @@ use Test::Most;
 use Test::JSON;
 use Mojo::JSON;
 use Mojo::UserAgent::Mockable::Serializer;
+use Mojo::UserAgent::Mockable::Request::Compare;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
 use Mojo::UserAgent;
@@ -55,89 +56,85 @@ sub test_transactions {
     my $serialized;
     lives_ok { $serialized = $serializer->serialize(@transactions) } q{serialize() did not die};
 
-    is_valid_json($serialized, q{Serializer outputs valid JSON});
+    is_valid_json( $serialized, q{Serializer outputs valid JSON} );
 
-    my $deserialized = Mojo::JSON::decode_json($serialized);
+    my $decoded = Mojo::JSON::decode_json($serialized);
 
-    is ref $deserialized, 'ARRAY', q{Transactions serialized as array};
-    for (0 .. $#transactions) {
+    is ref $decoded, 'ARRAY', q{Transactions serialized as array};
+
+    my @deserialized = $serializer->deserialize($serialized);
+
+    for ( 0 .. $#transactions ) {
+        my $deserialized_tx = $deserialized[$_];
+        my $tx              = $transactions[$_];
+
         for my $key (qw/request response/) {
-            ok defined($deserialized->[$_]{$key}), qq{Key "$key" defined in serial data};
+            ok defined( $decoded->[$_]{$key} ), qq{Key "$key" defined in serial data};
             for my $subkey (qw/class body/) {
-                ok defined($deserialized->[$_]{$key}{$subkey}), qq{Key "$subkey" defined in "$key" data};
+                ok defined( $decoded->[$_]{$key}{$subkey} ), qq{Key "$subkey" defined in "$key" data};
             }
             my $expected_class = sprintf 'Mojo::Message::%s', ucfirst $key;
-            is $deserialized->[$_]{$key}{'class'}, $expected_class, qq{"$key" class correct};
+            is $decoded->[$_]{$key}{'class'}, $expected_class, qq{"$key" class correct};
         }
 
-        my $req = Mojo::Message::Request->new->parse($deserialized->[$_]{'request'}{'body'});
-        my $res = Mojo::Message::Response->new->parse($deserialized->[$_]{'response'}{'body'});
-
-        my %expected_headers = (
-            request => $transactions[$_]->req->headers->to_hash,
-            response => $transactions[$_]->res->headers->to_hash,
-        );
-        my %got_headers = (
-            request => $req->headers->to_hash,
-            response => $res->headers->to_hash,
-        );
-
-        for my $key (qw/request response/) {
-            is_deeply($got_headers{$key}, $expected_headers{$key}, q{Headers correct});
+        my $comparator = Mojo::UserAgent::Mockable::Request::Compare->new;
+        if ( !ok $comparator->compare( $deserialized_tx->req, $tx->req ), q{Serialized request matches original} ) {
+            diag q{Request mismatch: } . $comparator->compare_result;
         }
 
-        is $req->url->path, $transactions[$_]->req->url->path, q{URL path correct};
-        is $req->body, $transactions[$_]->req->body, q{Body correct};
-        is_deeply $res->json, $transactions[$_]->res->json, q{Response encoded correctly};
+        is_deeply( $deserialized_tx->res->headers->to_hash, $tx->res->headers->to_hash, q{Response headers match} );
+
+        is_deeply $deserialized_tx->res->json, $tx->res->json, q{Response encoded correctly};
     }
     return;
 }
 
 sub get_local_app {
-    return Mojolicious::Quick->new(
-        [   GET => [
-                '/records' => sub {
-                    my $c = shift;
-                    $c->render(
-                        json => {
-                            meta    => { count => 1, },
-                            records => [
-                                {   id            => 8675309,
-                                    author        => 'Tommy Tutone',
-                                    subject       => 'Jenny',
-                                    repercussions => 'Many telephone companies now refuse to give out the number '
-                                        . '"867-5309".  People named "Jenny" have come to despise this song. '
-                                        . 'Mr. Tutone made out well.',
-                                }
-                            ],
+    my $app = Mojolicious->new;
+    $app->routes->get(
+        '/records' => sub {
+            my $c = shift;
+            $c->render(
+                json => {
+                    meta    => { count => 1, },
+                    records => [
+                        {   id            => 8675309,
+                            author        => 'Tommy Tutone',
+                            subject       => 'Jenny',
+                            repercussions => 'Many telephone companies now refuse to give out the number '
+                                . '"867-5309".  People named "Jenny" have come to despise this song. '
+                                . 'Mr. Tutone made out well.',
                         }
-                    );
-                },
-                '/record/:id' => sub {
-                    my $c  = shift;
-                    my $id = $c->stash('id');
-                    if ( $id eq '8675309' ) {
-                        $c->render(
-                            json => [
-                                {   id            => 8675309,
-                                    author        => 'Tommy Tutone',
-                                    subject       => 'Jenny',
-                                    repercussions => 'Many telephone companies now refuse to give out the number '
-                                        . '"867-5309".  People named "Jenny" have come to despise this song. '
-                                        . 'Mr. Tutone made out well.',
-                                    summary => 'The singer wonders who he can turn to, and recalls Jenny, who he feels '
-                                        . 'gives him something that he can hold on to.  He worries that she will '
-                                        . 'think that he is like other men who have seen her name and number written '
-                                        . 'upon the wall, but persists in calling her anyway. In his heart, the '
-                                        . 'singer knows that Jenny is the girl for him.',
-                                }
-                            ]
-                        );
-                    }
-                },
-            ],
-        ]
+                    ],
+                }
+            );
+        },
     );
+    $app->routes->get(
+        '/record/:id' => sub {
+            my $c  = shift;
+            my $id = $c->stash('id');
+            if ( $id eq '8675309' ) {
+                $c->render(
+                    json => [
+                        {   id            => 8675309,
+                            author        => 'Tommy Tutone',
+                            subject       => 'Jenny',
+                            repercussions => 'Many telephone companies now refuse to give out the number '
+                                . '"867-5309".  People named "Jenny" have come to despise this song. '
+                                . 'Mr. Tutone made out well.',
+                            summary => 'The singer wonders who he can turn to, and recalls Jenny, who he feels '
+                                . 'gives him something that he can hold on to.  He worries that she will '
+                                . 'think that he is like other men who have seen her name and number written '
+                                . 'upon the wall, but persists in calling her anyway. In his heart, the '
+                                . 'singer knows that Jenny is the girl for him.',
+                        }
+                    ]
+                );
+            }
+        },
+    );
+    return $app;
 }
 
 __END__

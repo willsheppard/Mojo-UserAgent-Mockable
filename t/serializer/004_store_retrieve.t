@@ -7,6 +7,7 @@ use Mojo::JSON;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
 use Mojo::UserAgent::Mockable::Serializer;
+use Mojo::UserAgent::Mockable::Request::Compare;
 use Mojolicious::Quick;
 
 my $serializer = Mojo::UserAgent::Mockable::Serializer->new;
@@ -34,19 +35,63 @@ subtest 'Victoria and Albert Museum' => sub {
 };
 
 subtest 'Local App' => sub {
-    my $app = get_local_app();
     my $dir = File::Temp->newdir;
     my $output_file = qq{$dir/local_app.json};
 
-    my @transactions = $app->ua->get(q{/records});
-     
+    my $app = get_local_app();
+    my $ua = Mojo::UserAgent->new;
+    $ua->server->app($app);
+
+    my $url = $ua->server->url->clone->path('/records');
+    my @transactions = $ua->get($url);
+
     my $records = $transactions[0]->res->json;
     my $record_id = $records->{'records'}[0]{'id'};
-    push @transactions,  $app->ua->get(qq{/record/$record_id});
+    push @transactions,  $ua->get($url->clone->path(qq{/record/$record_id}));
     my $record = $transactions[1]->res->json;
 
     BAIL_OUT('Local app did not serve records correctly') unless $transactions[1]->res->json->[0]{'author'} eq 'Tommy Tutone';
 
+    test_transactions($output_file, @transactions);
+};
+
+subtest 'random.org' => sub { 
+    my $dir = File::Temp->newdir;
+    my $output_file = qq{$dir/random_org.json};
+
+    my $url = Mojo::URL->new( q{https://www.random.org/integers/} )->query(
+        num    => 5,
+        min    => 0,
+        max    => 1e9,
+        col    => 1,
+        base   => 10,
+        format => 'plain',
+    );
+
+    my $ua = Mojo::UserAgent->new;
+    my @transactions = ($ua->get($url), $ua->get($url));
+
+    test_transactions($output_file, @transactions);
+};
+
+subtest 'URL bits' => sub {
+    my $dir = File::Temp->newdir;
+    my $output_file = qq{$dir/local_random.json};
+
+    my $app = get_local_random_app();
+    my $ua = Mojo::UserAgent->new;
+    $ua->server->app($app);
+
+    my $url = Mojo::URL->new( $ua->server->url('https')->clone->path('/integers') )->query(
+        num    => 5,
+        min    => 0,
+        max    => 1e9,
+        col    => 1,
+        base   => 10,
+        format => 'plain',
+    )->userinfo('nobody:nohow');
+
+    my @transactions = ($ua->get($url), $ua->get($url));
     test_transactions($output_file, @transactions);
 };
 
@@ -60,113 +105,108 @@ sub test_transactions {
     my $serialized = slurp $output_file;
     is_valid_json($serialized, q{Serializer outputs valid JSON});
 
-    my $deserialized = Mojo::JSON::decode_json($serialized);
+    my $decoded = Mojo::JSON::decode_json($serialized);
 
-    is ref $deserialized, 'ARRAY', q{Transactions serialized as array};
+    is ref $decoded, 'ARRAY', q{Transactions serialized as array};
     for (0 .. $#transactions) {
         for my $key (qw/request response/) {
-            ok defined($deserialized->[$_]{$key}), qq{Key "$key" defined in serial data};
+            ok defined($decoded->[$_]{$key}), qq{Key "$key" defined in serial data};
             for my $subkey (qw/class body/) {
-                ok defined($deserialized->[$_]{$key}{$subkey}), qq{Key "$subkey" defined in "$key" data};
+                ok defined($decoded->[$_]{$key}{$subkey}), qq{Key "$subkey" defined in "$key" data};
+            }
+            if ($key eq 'request') {
+                ok defined($decoded->[$_]{$key}{'url'}), qq{Key "url" defined in "$key" data};
             }
             my $expected_class = sprintf 'Mojo::Message::%s', ucfirst $key;
-            is $deserialized->[$_]{$key}{'class'}, $expected_class, qq{"$key" class correct};
+            is $decoded->[$_]{$key}{'class'}, $expected_class, qq{"$key" class correct};
         }
-
-        my $req = Mojo::Message::Request->new->parse($deserialized->[$_]{'request'}{'body'});
-        my $res = Mojo::Message::Response->new->parse($deserialized->[$_]{'response'}{'body'});
-
-        my %expected_headers = (
-            request => $transactions[$_]->req->headers->to_hash,
-            response => $transactions[$_]->res->headers->to_hash,
-        );
-        my %got_headers = (
-            request => $req->headers->to_hash,
-            response => $res->headers->to_hash,
-        );
-
-        for my $key (qw/request response/) {
-            is_deeply($got_headers{$key}, $expected_headers{$key}, q{Headers correct});
-        }
-
-        is $req->url->path, $transactions[$_]->req->url->path, q{URL path correct};
-        is $req->body, $transactions[$_]->req->body, q{Body correct};
-        is_deeply $res->json, $transactions[$_]->res->json, q{Response encoded correctly};
     }
 
     my @deserialized = $serializer->retrieve($output_file);
     for (0 .. $#transactions) {
         my $deserialized_tx = $deserialized[$_];
+        my $tx = $transactions[$_];
 
-        my $req = $deserialized_tx->req;
-        my $res = $deserialized_tx->res;
-
-        my %expected_headers = (
-            request => $transactions[$_]->req->headers->to_hash,
-            response => $transactions[$_]->res->headers->to_hash,
-        );
-        my %got_headers = (
-            request => $req->headers->to_hash,
-            response => $res->headers->to_hash,
-        );
-
-        for my $key (qw/request response/) {
-            is_deeply($got_headers{$key}, $expected_headers{$key}, q{Headers correct (retrieve)});
+        my $comparator = Mojo::UserAgent::Mockable::Request::Compare->new;
+        if (!ok $comparator->compare($deserialized_tx->req, $tx->req), q{Serialized request matches original}) {
+            diag q{Request mismatch: } . $comparator->compare_result;
         }
 
-        is $req->url->path, $transactions[$_]->req->url->path, q{URL path correct (retrieve)};
-        is $req->body, $transactions[$_]->req->body, q{Body correct (retrieve)};
-        is_deeply $res->json, $transactions[$_]->res->json, q{Response encoded correctly (retrieve)};
+        is_deeply($deserialized_tx->res->headers->to_hash, $tx->res->headers->to_hash, q{Response headers match});
+
+        is_deeply $deserialized_tx->res->json, $tx->res->json, q{Response encoded correctly};
     }
 
     return;
 }
 
 sub get_local_app {
-    return Mojolicious::Quick->new(
-        [   GET => [
-                '/records' => sub {
-                    my $c = shift;
-                    $c->render(
-                        json => {
-                            meta    => { count => 1, },
-                            records => [
-                                {   id            => 8675309,
-                                    author        => 'Tommy Tutone',
-                                    subject       => 'Jenny',
-                                    repercussions => 'Many telephone companies now refuse to give out the number '
-                                        . '"867-5309".  People named "Jenny" have come to despise this song. '
-                                        . 'Mr. Tutone made out well.',
-                                }
-                            ],
+    my $app = Mojolicious->new;
+    $app->routes->get(
+        '/records' => sub {
+            my $c = shift;
+            $c->render(
+                json => {
+                    meta    => { count => 1, },
+                    records => [
+                        {   id            => 8675309,
+                            author        => 'Tommy Tutone',
+                            subject       => 'Jenny',
+                            repercussions => 'Many telephone companies now refuse to give out the number '
+                                . '"867-5309".  People named "Jenny" have come to despise this song. '
+                                . 'Mr. Tutone made out well.',
                         }
-                    );
-                },
-                '/record/:id' => sub {
-                    my $c  = shift;
-                    my $id = $c->stash('id');
-                    if ( $id eq '8675309' ) {
-                        $c->render(
-                            json => [
-                                {   id            => 8675309,
-                                    author        => 'Tommy Tutone',
-                                    subject       => 'Jenny',
-                                    repercussions => 'Many telephone companies now refuse to give out the number '
-                                        . '"867-5309".  People named "Jenny" have come to despise this song. '
-                                        . 'Mr. Tutone made out well.',
-                                    summary => 'The singer wonders who he can turn to, and recalls Jenny, who he feels '
-                                        . 'gives him something that he can hold on to.  He worries that she will '
-                                        . 'think that he is like other men who have seen her name and number written '
-                                        . 'upon the wall, but persists in calling her anyway. In his heart, the '
-                                        . 'singer knows that Jenny is the girl for him.',
-                                }
-                            ]
-                        );
-                    }
-                },
-            ],
-        ]
+                    ],
+                }
+            );
+        },
     );
+    $app->routes->get(
+        '/record/:id' => sub {
+            my $c  = shift;
+            my $id = $c->stash('id');
+            if ( $id eq '8675309' ) {
+                $c->render(
+                    json => [
+                        {   id            => 8675309,
+                            author        => 'Tommy Tutone',
+                            subject       => 'Jenny',
+                            repercussions => 'Many telephone companies now refuse to give out the number '
+                                . '"867-5309".  People named "Jenny" have come to despise this song. '
+                                . 'Mr. Tutone made out well.',
+                            summary => 'The singer wonders who he can turn to, and recalls Jenny, who he feels '
+                                . 'gives him something that he can hold on to.  He worries that she will '
+                                . 'think that he is like other men who have seen her name and number written '
+                                . 'upon the wall, but persists in calling her anyway. In his heart, the '
+                                . 'singer knows that Jenny is the girl for him.',
+                        }
+                    ]
+                );
+            }
+        },
+    );
+    return $app;
 }
 
+sub get_local_random_app {
+    my $app = Mojolicious->new;
+    $app->routes->get(
+        '/integers' => sub {
+            my $c     = shift;
+            my $count = $c->req->param('num') || 1;
+            my $min   = $c->req->param('min') || 0;
+            my $max   = $c->req->param('max') || 1e9;
+            my $cols  = $c->req->param('cols') || 1;
+
+            my @nums;
+            for ( 0 .. ( $count - 1 ) ) {
+                my $number = ( int rand( $max - $min ) ) + $min;
+                push @nums, $number;
+            }
+
+            $c->render( text => join qq{\n}, @nums );
+        },
+    );
+    return $app;
+}
 __END__
