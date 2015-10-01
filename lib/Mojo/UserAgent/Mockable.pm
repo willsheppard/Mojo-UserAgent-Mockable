@@ -200,7 +200,9 @@ sub _init_playback {
         start => sub {
             my ( $ua, $tx ) = @_;
 
+            my $tx_url = $tx->req->url->to_string;
             my $recorded_tx = shift @{ $self->{'_transactions'} };
+            my $recorded_url = $recorded_tx->req->url->to_string;
 
             if ($self->comparator->compare( $tx->req, $recorded_tx->req )) { 
                 $self->_current_txn($recorded_tx);
@@ -209,7 +211,6 @@ sub _init_playback {
             else {
                 my $result = $self->comparator->compare_result;
                 $self->_current_txn(undef);
-                unshift @{ $self->{'_transactions'} }, $recorded_tx;
                 if ( $self->unrecognized eq 'exception' ) {
                     croak qq{Unrecognized request: $result};
                 }
