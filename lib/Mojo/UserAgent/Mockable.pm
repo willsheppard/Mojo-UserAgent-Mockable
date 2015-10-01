@@ -112,7 +112,8 @@ has '_mode';
 has '_current_txn';
 has '_compare_result';
 
-has '_playback_app' => sub {
+# Internal Mojolicious app that handles transaction playback
+has '_app' => sub {
     my $self = shift;
     my $app  = Mojolicious->new;
     $app->routes->any(
@@ -121,29 +122,20 @@ has '_playback_app' => sub {
             my $tx = $c->tx;
 
             my $txn = $self->_current_txn;
-            $tx->res( $txn->res );
-            $tx->res->headers->header( 'X-MUA-Mockable-Regenerated' => 1 );
-            $c->rendered( $txn->res->code );
-        }
-    );
-    $app;
-};
-
-has '_error_app' => sub {
-    my $self = shift;
-    my $app  = Mojolicious->new;
-    $app->routes->any(
-        '/*any' => { any => '' } => sub {
-            my $c  = shift;
-            my $tx = $c->tx;
-            # Append any explanatory headers appended to the request
-            for my $header ( keys %{ $tx->req->headers->to_hash } ) {
-                if ( $header =~ /^X-MUA-Mockable/ ) {
-                    my $val = $tx->req->headers->header($header);
-                    $tx->res->headers->header( $header, $val );
-                }
+            if ($txn) {
+                $tx->res( $txn->res );
+                $tx->res->headers->header( 'X-MUA-Mockable-Regenerated' => 1 );
+                $c->rendered( $txn->res->code );
             }
-            $c->render( text => '' );
+            else {
+                for my $header ( keys %{ $tx->req->headers->to_hash } ) {
+                    if ( $header =~ /^X-MUA-Mockable/ ) {
+                        my $val = $tx->req->headers->header($header);
+                        $tx->res->headers->header( $header, $val );
+                    }
+                }
+                $c->render( text => '' );
+            }
         },
     );
     $app;
@@ -202,6 +194,8 @@ sub _init_playback {
 
     $self->{'_transactions'} = [ $self->serializer->retrieve($self->file) ];
 
+    $self->server->app($self->_app);
+
     $self->{'_events'}{'start'} = $self->on(
         start => sub {
             my ( $ua, $tx ) = @_;
@@ -209,7 +203,6 @@ sub _init_playback {
             my $recorded_tx = shift @{ $self->{'_transactions'} };
 
             if ($self->comparator->compare( $tx->req, $recorded_tx->req )) { 
-                $self->server->app($self->_playback_app);
                 $self->_current_txn($recorded_tx);
                 $tx->req->url->host('')->scheme('')->port( $self->server->url->port );
             }
@@ -221,7 +214,6 @@ sub _init_playback {
                     croak qq{Unrecognized request: $result};
                 }
                 elsif ( $self->unrecognized eq 'null' ) {
-                    $self->server->app($self->_error_app);
                     $tx->req->headers->header( 'X-MUA-Mockable-Request-Recognized'      => 0 );
                     $tx->req->headers->header( 'X-MUA-Mockable-Request-Match-Exception' => $result );
                     $tx->req->url->host('')->scheme('')->port( $self->server->url->port );

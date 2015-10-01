@@ -104,12 +104,12 @@ sub do_test {
 
                 my $mock_transaction;
                 lives_ok { $mock_transaction = $mock->get($transaction->req->url) } q{GET did not die};
-                is $mock_transaction->res->test, '', q{Request out of order returned null};
+                is $mock_transaction->res->text, '', q{Request out of order returned null};
             }
             
             $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'exception' );
             if ($app) {
-                $app->ua($mock);
+                $mock->server->app($app);
             }
             for (0 .. $#transactions) {
                 my $index = $#transactions - $_;
@@ -120,7 +120,7 @@ sub do_test {
 
             $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'fallback' );
             if ($app) {
-                $app->ua($mock);
+                $mock->server->app($app);
             }
             for (0 .. $#transactions) {
                 my $index = $#transactions - $_;
