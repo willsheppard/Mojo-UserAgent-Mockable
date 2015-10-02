@@ -111,6 +111,7 @@ has 'ignore_headers' => sub { [] };
 has '_mode';
 has '_current_txn';
 has '_compare_result';
+has '_non_blocking';
 
 # Internal Mojolicious app that handles transaction playback
 has '_app' => sub {
@@ -189,24 +190,34 @@ sub save {
     }
 }
 
+sub start {
+    my ( $self, $tx, $cb ) = @_;
+    if ($cb) {
+        $self->_non_blocking(1);
+    }
+    return $self->SUPER::start( $tx, $cb );
+}
+
 sub _init_playback {
     my $self = shift;
 
-    $self->{'_transactions'} = [ $self->serializer->retrieve($self->file) ];
+    $self->{'_transactions'} = [ $self->serializer->retrieve( $self->file ) ];
 
-    $self->server->app($self->_app);
+    $self->server->app( $self->_app );
 
     $self->{'_events'}{'start'} = $self->on(
         start => sub {
             my ( $ua, $tx ) = @_;
 
-            my $tx_url = $tx->req->url->to_string;
-            my $recorded_tx = shift @{ $self->{'_transactions'} };
+            my $port         = $self->_non_blocking ? $self->server->nb_url->port : $self->server->url->port;
+            my $tx_url       = $tx->req->url->to_string;
+            my $recorded_tx  = shift @{ $self->{'_transactions'} };
             my $recorded_url = $recorded_tx->req->url->to_string;
 
-            if ($self->comparator->compare( $tx->req, $recorded_tx->req )) { 
+            if ( $self->comparator->compare( $tx->req, $recorded_tx->req ) ) {
                 $self->_current_txn($recorded_tx);
-                $tx->req->url->host('')->scheme('')->port( $self->server->url->port );
+
+                $tx->req->url->host('')->scheme('')->port($port);
             }
             else {
                 my $result = $self->comparator->compare_result;
@@ -217,7 +228,7 @@ sub _init_playback {
                 elsif ( $self->unrecognized eq 'null' ) {
                     $tx->req->headers->header( 'X-MUA-Mockable-Request-Recognized'      => 0 );
                     $tx->req->headers->header( 'X-MUA-Mockable-Request-Match-Exception' => $result );
-                    $tx->req->url->host('')->scheme('')->port( $self->server->url->port );
+                    $tx->req->url->host('')->scheme('')->port($port);
                 }
                 elsif ( $self->unrecognized eq 'fallback' ) {
                     $tx->on(
