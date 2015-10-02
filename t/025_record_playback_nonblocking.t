@@ -124,19 +124,6 @@ subtest 'exception on unrecognized (nonblocking)' => sub {
         my $index       = $#transactions - $_;
         my $transaction = $transactions[$index];
 
-        #eval {
-        #    $mock->get( 
-        #        $transaction->req->url->clone, 
-        #        sub { 
-        #            Mojo::IOLoop->stop;
-        #        } 
-        #    );
-        #    1;
-        #} or do {
-        #    like $@, qr/^Unrecognized request: URL query mismatch/;
-        #    Mojo::IOLoop->stop;
-        #};
-
         throws_ok {
             $mock->get( 
                 $transaction->req->url->clone, 

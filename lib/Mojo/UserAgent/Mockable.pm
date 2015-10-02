@@ -97,6 +97,22 @@ Two requests are considered to be equivalent if they have the same URL (order of
 notwithstanding), the same body content, and the same headers.  You may exclude headers from 
 consideration by means of the L</ignore_headers> attribute.
 
+=head1 CAVEATS
+
+=head2 Local application server
+
+Using this module against a local app, e.g.: 
+
+    my $app = Mojolicious->new;
+    ...
+
+    my $ua = Mojo::UserAgent::Mockable->new;
+    $ua->server->app($app);
+
+Doesn't work, because in playback mode, requests are served from an internal Mojolicious instance.
+So if you blow that away, the thing stops working, natch.
+
+
 =cut
 
 has 'mode' => 'passthrough';
@@ -124,6 +140,7 @@ has '_app' => sub {
 
             my $txn = $self->_current_txn;
             if ($txn) {
+                $self->cookie_jar->collect($txn);
                 $tx->res( $txn->res );
                 $tx->res->headers->header( 'X-MUA-Mockable-Regenerated' => 1 );
                 $c->rendered( $txn->res->code );

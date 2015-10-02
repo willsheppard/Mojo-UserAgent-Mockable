@@ -32,6 +32,8 @@ my $app = $args{'app'};
 
 my $output_file = qq{$dir/output.json};
 
+my %cookies;
+my $cookie_count = 0;
 # Record the interchange
 my ( @results, @transactions );
 {    # Look! Scoping braces!
@@ -41,6 +43,13 @@ my ( @results, @transactions );
     push @transactions, $mock->get( $url->clone->query( [ quux => 'alpha' ] ) );
     push @transactions, $mock->get( $url->clone->query( [ quux => 'beta' ] ) );
 
+    for my $cookie (@{$mock->cookie_jar->all}) {
+        $cookie_count++;
+        my $domain = $cookie->domain;
+        my $name = $cookie->name;
+        BAIL_OUT(qq{Duplicate cookie "$name" for domain "$domain"}) if ($cookies{$domain}{$name}); 
+        $cookies{$domain}{$name} = $cookie;
+    }
     @results = map { [ split /\n/, $_->res->text ] } @transactions;
 
     plan skip_all => 'Remote not responding properly'
@@ -68,6 +77,18 @@ for ( 0 .. $#transactions ) {
 
     is_deeply( $mock_result, $result, q{Result correct} );
     is_deeply( $mock_headers, $transaction->res->headers->to_hash, q{Response headers correct} );
+}
+
+is scalar @{$mock->cookie_jar->all}, $cookie_count, 'Cookie count correct';
+for my $cookie (@{$mock->cookie_jar->all}) {
+    my $domain = $cookie->domain;
+    my $name = $cookie->name;
+    my $original_cookie = $cookies{$domain}{$name};
+    subtest qq{Cookie "$name"} => sub {
+        for my $attr (qw/domain expires httponly max_age origin path secure/) {
+            is $cookie->$attr, $original_cookie->$attr, qq{"$attr" matches};
+        }
+    };
 }
 
 subtest 'null on unrecognized' => sub {
