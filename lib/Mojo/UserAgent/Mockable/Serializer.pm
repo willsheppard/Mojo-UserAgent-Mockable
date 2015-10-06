@@ -14,7 +14,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 use Safe::Isa (qw/$_isa/);
 use TryCatch;
 
-# ABSTRACT A class that serializes Mojo transactions created by Mojo::UserAgent::Mockable.
+# ABSTRACT: A class that serializes Mojo transactions created by Mojo::UserAgent::Mockable.
 
 # VERSION
 
