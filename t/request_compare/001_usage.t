@@ -76,5 +76,33 @@ subtest 'Different header' => sub {
     like $compare->compare_result, qr/^Header "[A-Za-z0-9-]+" mismatch/, 'Compare result correct';
 };
 
+subtest 'Blank header, same count' => sub {
+    my $compare = Mojo::UserAgent::Mockable::Request::Compare->new;
+    
+    my $r1 = Mojo::Message::Request->new;
+    $r1->parse(qq{GET /integers/?num=5&min=0&max=1000000000&col=1&base=10&format=plain&quux=alpha HTTP/1.1\cM\cJ});
+    $r1->parse(qq{Content-Length: 0\cM\cJ});
+    $r1->parse(qq{Accept-Encoding: gzip\cM\cJ});
+    $r1->parse(qq{User-Agent: kit.peters\@broadbean.com\cM\cJ});
+    $r1->parse(qq{Connection: keep-alive\cM\cJ});
+    $r1->parse(qq{X-Day: 8661\cM\cJ});
+    $r1->parse(qq{X-Foo:\cM\cJ});
+    $r1->parse(qq{Host: www.random.org\cM\cJ\cM\cJ});
+    $r1->finish;
+    
+    my $r2 = Mojo::Message::Request->new;
+    $r2->parse(qq{GET /integers/?num=5&min=0&max=1000000000&col=1&base=10&format=plain&quux=alpha HTTP/1.1\cM\cJ});
+    $r2->parse(qq{Content-Length: 0\cM\cJ});
+    $r2->parse(qq{Accept-Encoding: gzip\cM\cJ});
+    $r2->parse(qq{User-Agent: kit.peters\@broadbean.com\cM\cJ});
+    $r2->parse(qq{Connection: keep-alive\cM\cJ});
+    $r2->parse(qq{X-Day: 8661\cM\cJ});
+    $r2->parse(qq{X-Bar:\cM\cJ});
+    $r2->parse(qq{Host: www.random.org\cM\cJ\cM\cJ});
+    $r2->finish;
+
+    ok !$compare->compare( $r1, $r2 ), 'Different requests differ';
+    like $compare->compare_result, qr/^Header "[A-Za-z0-9-]+" mismatch/, 'Compare result correct';
+};
 
 done_testing;

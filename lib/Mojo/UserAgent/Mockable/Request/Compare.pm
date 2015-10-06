@@ -56,6 +56,11 @@ sub compare {
         }
 
         for my $header (keys %{$h1}) {
+            if (!defined $h2->{$header}) {
+                $self->compare_result(qq{Header "$header" mismatch: header not present in both requests.'});
+                return 0;
+            }
+
             if ($h1->{$header} ne $h2->{$header}) {
                 no warnings qw/uninitialized/;
                 $self->compare_result(qq{Header "$header" mismatch: got '$h1->{$header}', expected '$h2->{$header}'});
