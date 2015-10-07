@@ -1,30 +1,18 @@
 use 5.014;
 
-use File::Slurp qw/slurp/;
-use File::Temp;
-use FindBin qw($Bin);
-use Mojo::IOLoop;
-use Mojo::Server::Daemon;
-use Mojo::UserAgent::Mockable;
-use Mojolicious;
+package Application;
+use Mojolicious::Lite;
 use Mojolicious::Plugin::BasicAuthPlus;
-
-use Test::Most;
-use Test::Mojo;
-use TryCatch;
-
-my $app = Mojolicious->new;
-#$app->log->level('fatal');
 
 # Don't store passwords in cleartext, kids
 my %PASSWD = ( 'joeblow' => { uid => 1138, password => 'foobar' }, );
 
 my %USERINFO = ( 1138 => { name => 'Joe Blow' }, );
 
-$app->plugin('BasicAuthPlus');
+plugin 'BasicAuthPlus';
 
-my $auth = $app->routes->under(
-    sub {
+group {
+    under sub {
         my $c = shift;
 
         my $auth = sub {
@@ -38,23 +26,14 @@ my $auth = $app->routes->under(
             use warnings qw/uninitialized/;
         };
 
-        if (!$c->basic_auth( realm => $auth )) {
+        if ( !$c->basic_auth( realm => $auth ) ) {
             $c->render( status => 401, text => 'Stranger danger!' );
             return undef;
         }
         return 1;
-    }
-);
+    };
 
-$app->routes->get(
-    '/' => sub {
-        my $self = shift;
-        $self->render( text => 'index page' );
-    }
-);
-
-$auth->get(
-    '/random' => sub {
+    get '/random' => sub {
         my $c = shift;
 
         my $num = $c->req->param('num') || 5;
@@ -63,20 +42,35 @@ $auth->get(
 
         my @numbers = map { int rand( $max - $min ) + $min } ( 0 .. $num );
 
-        $c->render(json => \@numbers );
-    }
-);
+        $c->render( json => \@numbers );
+    };
 
-$auth->get(
-    '/userinfo' => sub {
+    get '/userinfo' => sub {
         my $c    = shift;
         my $info = $c->stash('current_user_info');
         $c->render( json => $info );
-    }
-);
+    };
+};
+
+get '/' => sub {
+    my $self = shift;
+    $self->render( text => 'index page' );
+};
+
+
+package main;
+
+use File::Temp;
+use Mojo::UserAgent::Mockable;
+use Mojo::Server::Daemon;
+use Mojo::IOLoop;
+
+use Test::Most;
+use Test::Mojo;
+use Test::Exception;
 
 my $daemon = Mojo::Server::Daemon->new(
-    app => $app, 
+    app => Application::app, 
     ioloop => Mojo::IOLoop->singleton,
     silent => 1,
 );
@@ -105,6 +99,13 @@ subtest recording => sub {
     $mock->save;
     BAIL_OUT('Output file does not exist') unless ok -e $output_file;
 };
+
+subtest 'internal Mojolicious app' => sub {
+    my $mock =
+        Mojo::UserAgent::Mockable->new( ioloop => Mojo::IOLoop->singleton, mode => 'playback', file => $output_file );
+    ok $mock->server->app ne Application::app, q{Internal app and local Mojlicious::Lite app differ};
+};
+
 
 subtest 'playback in order' => sub { 
     my $mock = Mojo::UserAgent::Mockable->new(ioloop => Mojo::IOLoop->singleton, mode => 'playback', file => $output_file);

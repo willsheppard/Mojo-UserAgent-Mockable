@@ -30,36 +30,31 @@ my $url = Mojo::URL->new(q{https://www.random.org/integers/})->query(
 
 my $output_file = qq{$dir/output.json};
 
+my $transaction_count = 10;
 # Record the interchange
 my ( @results, @transactions );
 {    # Look! Scoping braces!
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'record', file => $output_file );
     $mock->transactor->name('kit.peters@broadbean.com');
 
-    $mock->get(
-        $url->clone->query( [ quux => 'alpha' ] ),
-        sub {
-            my ( $ua, $tx ) = @_;
-            push @transactions, $tx;
-            Mojo::IOLoop->stop;
-        }
-    );
-    Mojo::IOLoop->start;
+    for (1 .. $transaction_count) {
+        $mock->get(
+            $url->clone->query( [ quux => int rand 1e9 ] ),
+            sub {
+                my ( $ua, $tx ) = @_;
+                push @transactions, $tx;
+                Mojo::IOLoop->stop;
+            }
+        );
+        Mojo::IOLoop->start;
+    }
 
-    $mock->get(
-        $url->clone->query( [ quux => 'beta' ] ),
-        sub {
-            my ( $ua, $tx ) = @_;
-            push @transactions, $tx;
-            Mojo::IOLoop->stop;
-        }
-    );
     Mojo::IOLoop->start;
 
     $mock->save;
 
     @results = map { [ split /\n/, $_->res->text ] } @transactions;
-    BAIL_OUT('Did not get all transactions') unless scalar @results == 2;
+    BAIL_OUT('Did not get all transactions') unless scalar @results == $transaction_count;
     BAIL_OUT('Remote not responding properly') unless ref $results[0] eq 'ARRAY' and scalar @{$results[0]} == $COUNT;
 }
 
@@ -71,7 +66,7 @@ $mock->transactor->name('kit.peters@broadbean.com');
 my @mock_results;
 my @mock_transactions;
 
-for ( 0 .. $#transactions ) {
+for ( 0 .. ($#transactions - 1)) {
     my $transaction = $transactions[$_];
     my $result      = $results[$_];
 
@@ -98,7 +93,7 @@ for ( 0 .. $#transactions ) {
 subtest 'null on unrecognized (nonblocking)' => sub {
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'null' );
 
-    for ( 0 .. $#transactions ) {
+    for ( 0 .. ($#transactions - 1) ) {
         my $index       = $#transactions - $_;
         my $transaction = $transactions[$index];
 
@@ -120,7 +115,7 @@ subtest 'null on unrecognized (nonblocking)' => sub {
 subtest 'exception on unrecognized (nonblocking)' => sub {
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'exception' );
 
-    for ( 0 .. $#transactions ) {
+    for ( 0 .. ($#transactions - 1) ) {
         my $index       = $#transactions - $_;
         my $transaction = $transactions[$index];
 
@@ -139,7 +134,7 @@ subtest 'exception on unrecognized (nonblocking)' => sub {
 subtest 'fallback on unrecognized (nonblocking)' => sub {
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'fallback' );
 
-    for ( 0 .. $#transactions ) {
+    for ( 0 .. ($#transactions - 1) ) {
         my $index       = $#transactions - $_;
         my $transaction = $transactions[$index];
         my $result      = $results[$index];

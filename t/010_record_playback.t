@@ -7,6 +7,7 @@ use Mojo::JSON qw(encode_json decode_json);
 use Mojo::UserAgent::Mockable;
 use Mojolicious::Quick;
 use Test::Most;
+use Test::Mojo;
 use TryCatch;
 
 my $TEST_FILE_DIR = qq{$Bin/files};
@@ -32,6 +33,7 @@ my $app = $args{'app'};
 
 my $output_file = qq{$dir/output.json};
 
+my $transaction_count = 10;
 my %cookies;
 my $cookie_count = 0;
 # Record the interchange
@@ -40,8 +42,9 @@ my ( @results, @transactions );
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'record', file => $output_file );
     $mock->transactor->name('kit.peters@broadbean.com');
 
-    push @transactions, $mock->get( $url->clone->query( [ quux => 'alpha' ] ) );
-    push @transactions, $mock->get( $url->clone->query( [ quux => 'beta' ] ) );
+    for ( 1 .. $transaction_count ) {
+        push @transactions, $mock->get( $url->clone->query( [ quux => int rand 1e9 ] ));
+    }
 
     for my $cookie (@{$mock->cookie_jar->all}) {
         $cookie_count++;
@@ -65,6 +68,7 @@ $mock->transactor->name('kit.peters@broadbean.com');
 my @mock_results;
 my @mock_transactions;
 
+# my $t = Test::Mojo->new;
 for ( 0 .. $#transactions ) {
     my $transaction = $transactions[$_];
     my $result      = $results[$_];
@@ -74,6 +78,12 @@ for ( 0 .. $#transactions ) {
     my $mock_headers     = $mock_transaction->res->headers->to_hash;
     is $mock_headers->{'X-MUA-Mockable-Regenerated'}, 1, 'X-MUA-Mockable-Regenerated header present and correct';
     delete $mock_headers->{'X-MUA-Mockable-Regenerated'};
+    
+    # $t->get_ok( $transaction->req->url->clone )->header_is( 'X-MUA-Mockable-Regenerated' => 1 );
+    # my $tx = $t->tx;
+    # my $mock_headers = $tx->res->headers->to_hash;
+    # my $mock_result = [ split /\n/, $tx->res->text ];
+    # delete $mock_headers->{'X-MUA-Mockable-Regenerated'};
 
     is_deeply( $mock_result, $result, q{Result correct} );
     is_deeply( $mock_headers, $transaction->res->headers->to_hash, q{Response headers correct} );
@@ -94,20 +104,19 @@ for my $cookie (@{$mock->cookie_jar->all}) {
 subtest 'null on unrecognized' => sub {
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'null' );
 
-    for ( 0 .. $#transactions ) {
+    my $t = Test::Mojo->new;
+    $t->ua($mock);
+    for ( 0 .. ($#transactions - 1) ) {
         my $index       = $#transactions - $_;
         my $transaction = $transactions[$index];
-
-        my $mock_transaction;
-        lives_ok { $mock_transaction = $mock->get( $transaction->req->url->clone ) } qq{GET did not die (TXN $index)};
-        is $mock_transaction->res->text, '', qq{Request out of order returned null (TXN $index)};
+        lives_ok { $t->get_ok($transaction->req->url->clone)->status_is(200)->content_is('') } qq{GET did not die (TXN $index)};
     }
 };
 
 subtest 'exception on unrecognized' => sub {
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'exception' );
 
-    for ( 0 .. $#transactions ) {
+    for ( 0 .. ($#transactions - 1) ) {
         my $index       = $#transactions - $_;
         my $transaction = $transactions[$index];
 
@@ -118,7 +127,7 @@ subtest 'exception on unrecognized' => sub {
 subtest 'fallback on unrecognized' => sub {
     my $mock = Mojo::UserAgent::Mockable->new( mode => 'playback', file => $output_file, unrecognized => 'fallback' );
 
-    for ( 0 .. $#transactions ) {
+    for ( 0 .. ($#transactions - 1) ) {
         my $index       = $#transactions - $_;
         my $transaction = $transactions[$index];
         my $result      = $results[$index];
