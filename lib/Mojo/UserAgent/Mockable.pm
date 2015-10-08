@@ -226,7 +226,7 @@ Joel Berger C<< <joel.a.berger at gmail.com> >>
 
 Dan Book C<< <grinnz at grinnz.com> >>
 
-Stefan Adams 
+Stefan Adams  C<< <stefan@borgia.com> >>
 
 Everyone on #mojo on irc.perl.org
 =cut
@@ -237,7 +237,6 @@ has 'unrecognized' => 'exception';
 has '_serializer' => sub { Mojo::UserAgent::Mockable::Serializer->new };
 has 'comparator' => sub {
     Mojo::UserAgent::Mockable::Request::Compare->new( ignore_headers => 'all' );
-        #        ignore_headers => [ 'Connection', 'Host', 'Content-Length', 'User-Agent' ] );
 };
 has 'ignore_headers' => sub { [] };
 has '_mode';
