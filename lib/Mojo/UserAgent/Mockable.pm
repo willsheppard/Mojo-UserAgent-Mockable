@@ -325,6 +325,9 @@ sub new {
         }
         $self->file($ENV{'LWP_UA_MOCK_FILE'});
     }
+    elsif ($self->mode ne 'record' && $self->mode ne 'playback') {
+        croak q{Invalid mode. Must be one of 'lwp-ua-mockable', 'record', 'playback', or 'passthrough'};
+    }
     else {
         $self->_mode($self->mode);
     }
@@ -335,9 +338,6 @@ sub new {
 
     if ($self->_mode ne 'passthrough') {
         my $mode = lc $self->_mode;
-        if ($mode eq 'recording') {
-            $mode = 'record';
-        }
         my $mode_init = qq{_init_$mode}; 
         if (!$self->can($mode_init)) {
             croak qq{Error: unsupported mode "$mode"};
@@ -380,7 +380,7 @@ sub _init_playback {
 
     $self->server->app( $self->_app );
 
-    $self->{'_events'}{'start'} = $self->on(
+    $self->on(
         start => sub {
             my ( $ua, $tx ) = @_;
 
@@ -427,9 +427,9 @@ sub _init_playback {
 sub _init_record {
     my $self = shift;
 
-    $self->{'_events'}{'start'} = $self->on(
+    $self->on(
         start => sub {
-            my ( $ua, $tx ) = @_;
+            my $tx = $_[1];
 
             $tx->once(
                 finish => sub {
@@ -453,20 +453,19 @@ sub _load_transactions {
 
 # TODO: This doesn't work like it oughtta.
 # # In record mode, write out the recorded file 
-# sub DESTROY { 
-#     my $self = shift;
-#    
-#     local($., $@, $!, $^E, $?);
-# 
-#     warn qq{In DESTROY. Launch: $self->{'_launchpid'}. Current: $$};
-#     if ($self->_mode eq 'record') {
-#         my $dir = (File::Spec->splitpath($self->file))[1];
-#         
-#         warn qq{"$dir" does not exist} unless -e $dir;
-#         if ( ! -e $dir && warnings::enabled) {
-#             carp qq{Cannot write output file: directory "$dir" does not exist};
-#         }
-#         $self->save($self->file);
-#     }
-# }
+ sub DESTROY { 
+     my $self = shift;
+say 'In DESTROY';    
+     local($., $@, $!, $^E, $?);
+ 
+     if ($self->_mode eq 'record') {
+         my $dir = (File::Spec->splitpath($self->file))[1];
+         
+         warn qq{"$dir" does not exist} unless -e $dir;
+         if ( ! -e $dir && warnings::enabled) {
+             carp qq{Cannot write output file: directory "$dir" does not exist};
+         }
+         $self->save($self->file);
+     }
+ }
 1;
