@@ -6,6 +6,16 @@ package Mojo::UserAgent::Mockable::Request::Compare;
 
 # ABSTRACT: Helper class for Mojo::UserAgent::Mockable that compares two Mojo::Message::Request instances
 
+=attr compare_result
+
+The result of the last compare operation.  It is only populated when two requests B<do not> match.
+
+=method compare
+
+Compare two instances of L<Mojo::Message::Request>.
+
+=cut
+
 use Carp;
 use Mojo::Base -base;
 use Mojo::URL;
@@ -69,6 +79,7 @@ sub compare {
         }
     }
 
+    $self->compare_result('');
     return 1;
 }
 
