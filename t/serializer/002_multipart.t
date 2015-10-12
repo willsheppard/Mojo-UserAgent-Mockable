@@ -1,10 +1,14 @@
 use 5.014;
+use FindBin qw($Bin);
 use Test::Most;
 use Test::JSON;
 use Mojo::JSON;
 use Mojo::UserAgent::Mockable::Serializer;
 use Mojolicious::Quick;
 use Safe::Isa qw($_isa);
+
+my $TEST_FILES_DIR = qq{$Bin/../files};
+
 my $serializer = Mojo::UserAgent::Mockable::Serializer->new;
 
 my $app = Mojolicious::Quick->new(
@@ -22,7 +26,7 @@ my $tx = $ua->post(
         'X-Zaphod-Last-Name'                => 'Beeblebrox',
         'X-Benedict-Cumberbatch-Silly-Name' => 'Bumbershoot Crinklypants',
         'Cookie'                            => 'foo=bar; sessionID=OU812; datingMyself=yes',
-    } => form => { foo => 'bar', quux => 'quuy', thefile => { file => q{/Users/kipeters/Documents/sample.txt} } }
+    } => form => { foo => 'bar', quux => 'quuy', thefile => { file => qq{$TEST_FILES_DIR/apocalypse_1.txt} } }
 );
 BAIL_OUT 'App did not respond properly' unless $tx->res->body eq 'Zip zop zoobity bop';
 my %headers = %{ $tx->req->headers->to_hash };
