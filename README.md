@@ -4,7 +4,7 @@ Mojo::UserAgent::Mockable - A Mojo User-Agent that can record and play back requ
 
 # VERSION
 
-version 1.00
+version 1.01
 
 # SYNOPSIS
 
@@ -278,5 +278,3 @@ This software is copyright (c) 2015 by Broadbean Technology.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
-
-[![volkswagen status](https://auchenberg.github.io/volkswagen/volkswargen_ci.svg?v=1)](https://github.com/auchenberg/volkswagen)
