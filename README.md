@@ -4,7 +4,7 @@ Mojo::UserAgent::Mockable - A Mojo User-Agent that can record and play back requ
 
 # VERSION
 
-version 1.01
+version 1.02
 
 # SYNOPSIS
 
