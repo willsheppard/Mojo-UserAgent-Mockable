@@ -5,7 +5,6 @@ package Mojo::UserAgent::Mockable;
 use warnings::register;
 
 use Carp;
-use File::Slurp;
 use JSON::MaybeXS;
 use Mojo::Base 'Mojo::UserAgent';
 use Mojo::Util qw/secure_compare/;

@@ -1,5 +1,11 @@
 {{$NEXT}}
 
+- Removed all dependencies on File::Slurp, replaced with File::Slurper or
+  Mojo::Util. See 
+  http://blogs.perl.org/users/leon_timmermans/2015/08/fileslurp-is-broken-and-wrong.html
+
+1.01      2015-10-12 09:33:02-05:00 America/Chicago
+
 - Tests were referencing a file local to my work machine that was not in the
   distribution. Oops.
 

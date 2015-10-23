@@ -1,5 +1,5 @@
 use 5.014;
-use File::Slurp qw(slurp);
+use Mojo::Util qw(slurp);
 use File::Temp;
 use Test::Most;
 use Test::JSON;

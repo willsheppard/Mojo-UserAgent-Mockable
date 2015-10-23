@@ -8,7 +8,7 @@ use Carp;
 use Class::Load ':all';
 use Data::Serializer::Raw;
 use English qw/-no_match_vars/;
-use File::Slurp qw/slurp write_file/;
+use File::Slurper qw(write_text read_text);
 use JSON::MaybeXS qw/encode_json decode_json/;
 use Mojo::Base 'Mojo::EventEmitter';
 use Safe::Isa (qw/$_isa/);
@@ -25,6 +25,7 @@ use TryCatch;
     
     use Mojo::UserAgent::Mockable::Serializer;
     use Mojo::UserAgent;
+    use File::Slurper qw(read_text write_text);
 
     my $ua = Mojo::UserAgent->new;
     my $serializer = Mojo::UserAgent::Mockable::Serializer->new;
@@ -35,7 +36,7 @@ use TryCatch;
     push @transactions, $ua->get('http://example.com/subobject/456');
 
     my $json = $serializer->serialize(@transactions);
-    write_file('/path/to/file.json', $json);
+    write_text('/path/to/file/json', $json);
 
     # OR
 
@@ -43,7 +44,7 @@ use TryCatch;
 
     # Later...
 
-    my $json = read_file('/path/to/file.json');
+    my $json = read_text('/path/to/file.json');
     my @reconstituted_transactions = $serializer->deserialize($json);
 
     # OR
@@ -323,13 +324,13 @@ sub store {
     my ($self, $file, @transactions) = @_;
 
     my $serialized = $self->serialize(@transactions);
-    write_file($file, $serialized);
+    write_text($file, $serialized);
 }
 
 sub retrieve {
     my ($self, $file) = @_;
 
-    my $contents = slurp($file);
+    my $contents = read_text($file);
     return $self->deserialize($contents);
 }
 1;

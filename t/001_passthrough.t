@@ -1,7 +1,7 @@
 use 5.014;
 
 use File::Compare qw(compare);
-use File::Slurp qw/slurp/;
+use Mojo::Util qw/slurp/;
 use File::Temp;
 use FindBin qw($Bin);
 use Mojo::JSON qw(encode_json decode_json);
