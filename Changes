@@ -1,5 +1,12 @@
 {{$NEXT}}
 
+1.03      2015-11-10 10:51:00-05:00 America/Chicago 
+
+- Updated unit tests to deal with changed PK value for object 1 from Victoria and 
+  Albert Museum.
+
+1.02      2015-10-22 09:33:02-05:00 America/Chicago
+
 - Removed all dependencies on File::Slurp, replaced with File::Slurper or
   Mojo::Util. See 
   http://blogs.perl.org/users/leon_timmermans/2015/08/fileslurp-is-broken-and-wrong.html
