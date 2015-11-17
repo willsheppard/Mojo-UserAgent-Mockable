@@ -1,5 +1,8 @@
 {{$NEXT}}
 
+- Updated unit tests again to completely remove dependency on PK value from Object 1
+  from Victoria and Albert Museum.
+
 1.03      2015-11-10 10:51:00-05:00 America/Chicago 
 
 - Updated unit tests to deal with changed PK value for object 1 from Victoria and 
