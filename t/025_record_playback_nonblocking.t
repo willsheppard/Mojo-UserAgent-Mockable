@@ -55,7 +55,6 @@ my ( @results, @transactions );
 
     @results = map { [ split /\n/, $_->res->text ] } @transactions;
     BAIL_OUT('Did not get all transactions') unless scalar @results == $transaction_count;
-    BAIL_OUT('Remote not responding properly') unless ref $results[0] eq 'ARRAY' and scalar @{$results[0]} == $COUNT;
 }
 
 BAIL_OUT('Output file does not exist') unless ok(-e $output_file, 'Output file exists');

@@ -1,5 +1,11 @@
 {{$NEXT}}
 
+- If we played back a transaction containing an instance of Mojo::URL, that URL 
+  would be rewritten during playback. No big deal, except when you want to then
+  use that URL for something else.
+
+1.04      2015-11-16 10:51:00-05:00 America/Chicago 
+ 
 - Updated unit tests again to completely remove dependency on PK value from Object 1
   from Victoria and Albert Museum.
 
