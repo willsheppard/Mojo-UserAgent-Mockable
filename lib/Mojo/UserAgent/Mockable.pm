@@ -384,13 +384,12 @@ sub _init_playback {
             my ( $ua, $tx ) = @_;
 
             my $port         = $self->_non_blocking ? $self->server->nb_url->port : $self->server->url->port;
-            my $tx_url       = $tx->req->url->to_string;
             my $recorded_tx  = shift @{ $self->{'_transactions'} };
-            my $recorded_url = $recorded_tx->req->url->to_string;
 
             if ( $self->comparator->compare( $tx->req, $recorded_tx->req ) ) {
                 $self->_current_txn($recorded_tx);
-
+                
+                $tx->req->url($tx->req->url->clone);
                 $tx->req->url->host('')->scheme('')->port($port);
             }
             else {
