@@ -6,7 +6,6 @@ use warnings::register;
 
 use Carp;
 use Class::Load ':all';
-use Data::Serializer::Raw;
 use English qw/-no_match_vars/;
 use File::Slurper qw(write_text read_text);
 use JSON::MaybeXS qw/encode_json decode_json/;
