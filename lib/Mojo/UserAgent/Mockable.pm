@@ -6,6 +6,7 @@ use warnings::register;
 
 use Carp;
 use JSON::MaybeXS;
+use Mojolicious;
 use Mojo::Base 'Mojo::UserAgent';
 use Mojo::Util qw/secure_compare/;
 use Mojo::UserAgent::Mockable::Serializer;
