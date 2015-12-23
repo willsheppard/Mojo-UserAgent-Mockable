@@ -1,5 +1,7 @@
 {{$NEXT}}
 
+- Version bump with fixed Changes file and two digit version.
+
 1.2       2015-12-23 11:23:24-06:00 America/Chicago
 
 - Added 'ignore_body' option
