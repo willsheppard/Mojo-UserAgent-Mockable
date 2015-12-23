@@ -1,5 +1,9 @@
 {{$NEXT}}
 
+1.2       2015-12-23 11:23:24-06:00 America/Chicago
+
+- Added 'ignore_body' option
+
 1.11      2015-12-01 15:33:54-08:00 America/Los_Angeles
 
 - Added missing 'use Mojolicious'. 
