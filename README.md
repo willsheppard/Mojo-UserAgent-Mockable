@@ -68,6 +68,11 @@ Request header names to ignore when comparing a request made with this class to 
 playback mode. Specify 'all' to remove any headers from consideration. By default, the 'Connection',
 'Host', 'Content-Length', and 'User-Agent' headers are ignored.
 
+## ignore\_body
+
+Ignore the request body entirely when comparing a request made with this class to a stored request 
+in playback mode. 
+
 # METHODS
 
 ## save
@@ -99,7 +104,8 @@ option).
 
 Two requests are considered to be equivalent if they have the same URL (order of query parameters
 notwithstanding), the same body content, and the same headers.  You may exclude headers from 
-consideration by means of the ["ignore\_headers"](#ignore_headers) attribute.
+consideration by means of the ["ignore\_headers"](#ignore_headers) attribute. You may excluse the request body from
+consideration by means of the ["ignore\_body"](#ignore_body) attribute.
 
 # CAVEATS
 

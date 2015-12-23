@@ -67,6 +67,11 @@ Request header names to ignore when comparing a request made with this class to 
 playback mode. Specify 'all' to remove any headers from consideration. By default, the 'Connection',
 'Host', 'Content-Length', and 'User-Agent' headers are ignored.
 
+=attr ignore_body
+
+Ignore the request body entirely when comparing a request made with this class to a stored request 
+in playback mode. 
+
 =head1 THEORY OF OPERATION
 
 =head2 Recording mode
@@ -92,7 +97,8 @@ option).
 
 Two requests are considered to be equivalent if they have the same URL (order of query parameters
 notwithstanding), the same body content, and the same headers.  You may exclude headers from 
-consideration by means of the L</ignore_headers> attribute.
+consideration by means of the L</ignore_headers> attribute. You may excluse the request body from
+consideration by means of the L</ignore_body> attribute.
 
 =head1 CAVEATS
 
@@ -273,10 +279,9 @@ has 'mode' => 'passthrough';
 has 'file';
 has 'unrecognized' => 'exception';
 has '_serializer' => sub { Mojo::UserAgent::Mockable::Serializer->new };
-has 'comparator' => sub {
-    Mojo::UserAgent::Mockable::Request::Compare->new( ignore_headers => 'all' );
-};
+has 'comparator';
 has 'ignore_headers' => sub { [] };
+has 'ignore_body';
 has '_mode';
 has '_current_txn';
 has '_compare_result';
@@ -315,6 +320,13 @@ has '_app' => sub {
 sub new {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
+
+    my %comparator_args = (
+        ignore_headers => 'all',
+        ignore_body    => $self->ignore_body,
+    );
+    $self->comparator( Mojo::UserAgent::Mockable::Request::Compare->new(%comparator_args) );
+
     $self->{'_launchpid'} = $$;
     if ($self->mode eq 'lwp-ua-mockable') {
         $self->_mode($ENV{'LWP_UA_MOCK'});

@@ -23,6 +23,7 @@ use Safe::Isa qw{$_isa};
 
 has compare_result => '';
 has ignore_headers => sub { [] };
+has ignore_body => '';
 
 sub compare {
     my ($self, $r1, $r2) = @_;
@@ -46,7 +47,7 @@ sub compare {
         return 0;
     }
 
-    if ( $r1->body ne $r2->body ) {
+    if ( !$self->ignore_body && $r1->body ne $r2->body ) {
         $self->compare_result('Body mismatch');
         return 0;
     }
