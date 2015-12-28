@@ -271,6 +271,8 @@ Dan Book C<< <grinnz at grinnz.com> >>
 
 Stefan Adams  C<< <stefan@borgia.com> >>
 
+Mohammad Anwar C<< mohammad.anwar@yahoo.com >>
+
 Everyone on #mojo on irc.perl.org
 
 =cut

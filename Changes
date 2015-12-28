@@ -1,5 +1,9 @@
 {{$NEXT}}
 
+- Auto-add "provides" to META.* by means of 
+  Dist::Zilla::Plugin::MetaProvides::Package. Submitted by Mohammad Anwar
+  (https://github.com/Manwar).
+
 1.21      2015-12-28 11:54:21-06:00 America/Chicago
 
 - Version bump with fixed Changes file and two digit version.
