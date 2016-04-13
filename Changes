@@ -1,5 +1,10 @@
 {{$NEXT}}
 
+- Update tests to deal with failures due to missing / old versions of 
+  IO::Socket::SSL 
+
+1.22      2016-04-13 13:03:44-05:00 America/Chicago
+
 - Auto-add "provides" to META.* by means of 
   Dist::Zilla::Plugin::MetaProvides::Package. Submitted by Mohammad Anwar
   (https://github.com/Manwar).

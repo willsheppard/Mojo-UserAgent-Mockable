@@ -10,6 +10,16 @@ use Mojolicious::Quick;
 use Test::Most;
 use TryCatch;
 
+my $ver;
+eval { 
+    require IO::Socket::SSL; 
+    $ver = $IO::Socket::SSL::VERSION; 
+    1;
+} or plan skip_all => 'IO::Socket::SSL not installed';
+
+plan skip_all => qq{Minimum version of IO::Socket::SSL is 1.94 for this test, but you have $ver} if $ver < 1.94;
+
+
 my $TEST_FILE_DIR = qq{$Bin/files};
 my $COUNT         = 5;
 my $MIN           = 0;
