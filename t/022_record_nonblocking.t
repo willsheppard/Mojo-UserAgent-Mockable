@@ -21,13 +21,15 @@ my $mock = Mojo::UserAgent::Mockable->new( mode => 'record', file => $output_fil
 for ( 0 .. $#transactions ) {
     my $result_from_mock;
     my $index = $_;
+    
+    diag qq{Check result $index};
     lives_ok {
         $mock->get(
             $transactions[$_]->req->url->clone,
             sub {
                 my ( $ua, $tx ) = @_;
+                diag qq{Get URL $index};
                 is_deeply $tx->res->json, $results[$index], qq{result $index matches that of stock Mojo UA (nonblocking)};
-                Mojo::IOLoop->stop_gracefully if Mojo::IOLoop->is_running;
             }
         );
     }
