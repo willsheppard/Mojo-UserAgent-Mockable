@@ -2,6 +2,12 @@
 
 Mojo::UserAgent::Mockable - A Mojo User-Agent that can record and play back requests without Internet connectivity, similar to LWP::UserAgent::Mockable
 
+# GET INVOLVED!
+
+- Update tests to use echo.jsontest.com
+- Update tests to gracefully exit if IO::Socket::SSL is not available
+- Add non-SSL tests
+
 # VERSION
 
 version 1.21
