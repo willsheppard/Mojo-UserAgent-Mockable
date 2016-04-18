@@ -7,7 +7,7 @@ use FindBin qw($Bin);
 use Mojo::JSON qw(encode_json decode_json);
 use Mojo::UserAgent::Mockable;
 use Mojolicious::Quick;
-use Test::Most;
+use Test::Most tests => 2;
 use Test::JSON;
 use TryCatch;
 
@@ -29,11 +29,8 @@ lives_ok {
         sub {
             my ( $ua, $tx ) = @_;
             is_deeply $tx->res->json, $result, q{Result matches (non blocking)};
-            Mojo::IOLoop->stop_gracefully;
         }
     );
 }
 'non blocking get() did not die';
-Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
-
-done_testing;
+Mojo::IOLoop->start;
