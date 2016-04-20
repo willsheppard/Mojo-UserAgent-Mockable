@@ -1,5 +1,7 @@
 {{$NEXT}}
 
+- Fix broken dist.ini 
+
 1.23      2016-04-13 14:44:41-05:00 America/Chicago
 
 - Update tests to deal with failures due to missing / old versions of 
