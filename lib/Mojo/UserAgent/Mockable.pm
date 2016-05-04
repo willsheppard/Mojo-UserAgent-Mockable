@@ -473,7 +473,6 @@ sub _load_transactions {
          my $dir = (File::Spec->splitpath($self->file))[1];
          unless($dir){
 	   warnings::warn qq{Using current working directory} if warnings::enabled;
-	   $dir = '.';
 	 }
          warn qq{"$dir" does not exist} unless -e $dir;
          if ( ! -e $dir && warnings::enabled) {
