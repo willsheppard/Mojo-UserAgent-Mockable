@@ -470,14 +470,6 @@ sub _load_transactions {
      my $self = shift;
  
      if ($self->_mode eq 'record') {
-         my $dir = (File::Spec->splitpath($self->file))[1];
-         unless($dir){
-	   warnings::warn qq{Using current working directory} if warnings::enabled;
-	 }
-         warn qq{"$dir" does not exist} unless -e $dir;
-         if ( ! -e $dir && warnings::enabled) {
-             carp qq{Cannot write output file: directory "$dir" does not exist};
-         }
          $self->save($self->file);
      }
  }
