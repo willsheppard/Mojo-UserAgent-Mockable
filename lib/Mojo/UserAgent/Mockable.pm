@@ -472,7 +472,7 @@ sub _load_transactions {
      if ($self->_mode eq 'record') {
          my $dir = (File::Spec->splitpath($self->file))[1];
          unless($dir){
-	   warn qq{Using current working directory};
+	   warnings::warn qq{Using current working directory} if warnings::enabled;
 	   $dir = '.';
 	 }
          warn qq{"$dir" does not exist} unless -e $dir;
