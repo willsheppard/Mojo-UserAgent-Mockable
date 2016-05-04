@@ -47,7 +47,7 @@ Works like L<LWP::UserAgent::Mockable>. Set the LWP_UA_MOCK environment variable
 
 =attr file
 
-File to record to / play back from.a
+File to record to / play back from.
 
 =attr unrecognized
 
@@ -470,12 +470,6 @@ sub _load_transactions {
      my $self = shift;
  
      if ($self->_mode eq 'record') {
-         my $dir = (File::Spec->splitpath($self->file))[1];
-         
-         warn qq{"$dir" does not exist} unless -e $dir;
-         if ( ! -e $dir && warnings::enabled) {
-             carp qq{Cannot write output file: directory "$dir" does not exist};
-         }
          $self->save($self->file);
      }
  }
