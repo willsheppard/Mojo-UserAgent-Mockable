@@ -47,7 +47,7 @@ Works like L<LWP::UserAgent::Mockable>. Set the LWP_UA_MOCK environment variable
 
 =attr file
 
-File to record to / play back from.a
+File to record to / play back from.
 
 =attr unrecognized
 
