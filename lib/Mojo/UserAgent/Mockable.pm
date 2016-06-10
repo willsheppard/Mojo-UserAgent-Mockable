@@ -307,6 +307,7 @@ Everyone on #mojo on irc.perl.org
 has 'mode' => 'passthrough';
 has 'file';
 has 'unrecognized' => 'exception';
+has 'request_normalizer';
 has '_serializer' => sub { Mojo::UserAgent::Mockable::Serializer->new };
 has 'comparator';
 has 'ignore_headers' => sub { [] };
@@ -428,7 +429,8 @@ sub _init_playback {
             my $port         = $self->_non_blocking ? $self->server->nb_url->port : $self->server->url->port;
             my $recorded_tx  = shift @{ $self->{'_transactions'} };
 
-            if ( $self->comparator->compare( $tx->req, $recorded_tx->req ) ) {
+            my ($this_req, $recorded_req) = $self->_normalized_req( $tx, $recorded_tx );
+            if ( $self->comparator->compare( $this_req, $recorded_req ) ) {
                 $self->_current_txn($recorded_tx);
                 
                 $tx->req->url($tx->req->url->clone);
@@ -463,6 +465,19 @@ sub _init_playback {
     return $self;
 }
 
+sub _normalized_req {
+    my $self = shift;
+    my ($tx, $recorded_tx) = @_;
+
+    my $request_normalizer = $self->request_normalizer or return ( $tx->req, $recorded_tx->req );
+    croak("The request_normalizer attribute is not a coderef") if ( ref($request_normalizer) ne "CODE" );
+
+    my $req          = $tx->req->clone;
+    my $recorded_req = $recorded_tx->req->clone;
+    $request_normalizer->( $req, $recorded_req ); # To be modified in-place
+
+    return ($req, $recorded_req);
+}
 
 sub _init_record {
     my $self = shift;
