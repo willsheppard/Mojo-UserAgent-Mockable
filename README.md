@@ -80,7 +80,7 @@ be used in conjunction with the previous attributes).
 
 The subref takes two parameters: the current Mojo::Message::Request and the recorded one. The subref
 should modify these request objects in-place so that they match each other for the parts where your
-test doesn't care, e.g. set an id or timestamp to the same value in both requests.
+code doesn't care, e.g. set an id or timestamp to the same value in both requests.
 
 The return value is ignored, so a typical subref to ignore differences in any numerical id parts of
 the query path could look like this
@@ -121,12 +121,12 @@ option).
 
 ### Request matching
 
-Two requests are considered to be equivalent if they have the same URL (order of query parameters
-notwithstanding), the same body content, and the same headers.
-
 Before comparing the current request with the recorded one, the requests are normalized using the
 subref in the request\_normalizer attribute. The default is no normalization. See above for how to
 use it.
+
+Two requests are considered to be equivalent if they have the same URL (order of query parameters
+notwithstanding), the same body content, and the same headers.
 
 You may also exclude headers from consideration by means of the ["ignore\_headers"](#ignore_headers) attribute. Or,
 you may excluse the request body from consideration by means of the ["ignore\_body"](#ignore_body) attribute.
