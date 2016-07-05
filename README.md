@@ -4,7 +4,7 @@ Mojo::UserAgent::Mockable - A Mojo User-Agent that can record and play back requ
 
 # VERSION
 
-version 1.30
+version 1.31
 
 # SYNOPSIS
 
@@ -297,6 +297,8 @@ Dan Book `<grinnz at grinnz.com>`
 Stefan Adams  `<stefan@borgia.com>`
 
 Mohammad Anwar `mohammad.anwar@yahoo.com`
+
+Johan Lindstrom `johanl@cpan.org`
 
 Everyone on #mojo on irc.perl.org
 

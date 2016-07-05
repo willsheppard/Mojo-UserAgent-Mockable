@@ -300,6 +300,8 @@ Stefan Adams  C<< <stefan@borgia.com> >>
 
 Mohammad Anwar C<< mohammad.anwar@yahoo.com >>
 
+Johan Lindstrom C<< johanl@cpan.org >>
+
 Everyone on #mojo on irc.perl.org
 
 =cut
