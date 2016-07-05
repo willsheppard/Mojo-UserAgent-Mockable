@@ -1,5 +1,8 @@
 {{$NEXT}}
 
+- Added support for normalizing requests. Patch courtesy of Johann Lindstrom 
+  <johanl@cpan.org>. 
+
 1.24      2016-04-20 15:52:26-05:00 America/Chicago
 
 - Fix broken dist.ini 
