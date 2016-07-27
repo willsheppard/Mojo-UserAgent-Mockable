@@ -1,5 +1,7 @@
 {{$NEXT}}
 
+- Updated to work with Mojolicious 7.0
+
 1.30      2016-07-05 10:34:05-05:00 America/Chicago
 
 - Added support for normalizing requests. Patch courtesy of Johan Lindstrom 

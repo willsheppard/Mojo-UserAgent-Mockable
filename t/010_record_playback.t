@@ -83,7 +83,8 @@ for ( 0 .. $#transactions ) {
     my $transaction = $transactions[$_];
     my $result      = $results[$_];
 
-    my $mock_transaction = $mock->get( $transaction->req->url->clone );
+    my $url = $transaction->req->url->clone; 
+    my $mock_transaction = $mock->get( $url );
     my $mock_result      = [ split /\n/, $mock_transaction->res->text ];
     my $mock_headers     = $mock_transaction->res->headers->to_hash;
     is $mock_headers->{'X-MUA-Mockable-Regenerated'}, 1, 'X-MUA-Mockable-Regenerated header present and correct';

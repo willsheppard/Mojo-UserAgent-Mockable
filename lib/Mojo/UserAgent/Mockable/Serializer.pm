@@ -210,8 +210,8 @@ sub _serialize_message {
         class => ref $message,
         body  => $message->to_string,
     };
-    if ($message->can('url')) {
-        $slush->{'url'} = $message->url->to_string;
+    if ( $message->can('url') ) {
+        $slush->{url} = _freeze_url($message->url);
     }
     for my $event ( keys %{ $message->{'events'} } ) {
         next if $event eq 'pre_freeze' or $event eq 'post_freeze';
@@ -220,6 +220,21 @@ sub _serialize_message {
     }
 
     $message->emit('post_freeze', $slush);
+    return $slush;
+}
+
+sub _freeze_url {
+    my $url = shift;
+    if ( !$url->$_isa('Mojo::URL') ) {
+        $url = Mojo::URL->new($url);
+    }
+    my $slush;
+    for my $attr (qw/scheme userinfo host port path query fragment/) {
+        $slush->{$attr} = sprintf '%s', $url->$attr if defined $url->$attr;
+    }
+    if ( %{ $url->base } ) {
+        $slush->{base} = _freeze_url( $url->base );
+    }
     return $slush;
 }
 
@@ -290,33 +305,46 @@ sub _deserialize_tx {
 }
 
 sub _deserialize_message {
-    my ($self, $slush) = @_;
+    my ( $self, $slush ) = @_;
     for my $key (qw/body class/) {
-        if (!$slush->{$key}) {
+        if ( !$slush->{$key} ) {
             croak qq{Invalid serialized data: missing required key "$key"};
         }
     }
 
-    load_class($slush->{'class'});
+    load_class( $slush->{'class'} );
     my $obj = $slush->{'class'}->new;
-    if ($slush->{'url'} && $obj->can('url')) {
-        $obj->url(Mojo::URL->new($slush->{'url'}));
+    if ( $slush->{'url'} && $obj->can('url') ) {
+        $obj->url( _thaw_url( $slush->{url} ) );
     }
-    if (!$obj->can('parse')) {
+    if ( !$obj->can('parse') ) {
         die qq{Messages must define the 'parse' method\n};
     }
-    $obj->parse($slush->{'body'});
+    $obj->parse( $slush->{'body'} );
 
-    if (!$obj->can('emit')) {
+    if ( !$obj->can('emit') ) {
         die qq{Messages must define the 'emit' method\n};
     }
-    if ($slush->{'events'}) {
-        for my $event (@{$slush->{'events'}}) {
+    if ( $slush->{'events'} ) {
+        for my $event ( @{ $slush->{'events'} } ) {
             $obj->emit($event);
         }
     }
 
     return $obj;
+}
+
+sub _thaw_url {
+    my $slush = shift;
+    my $url   = Mojo::URL->new;
+
+    for my $attr ( keys %{$slush} ) {
+        $url->$attr( $slush->{$attr} );
+    }
+    if ( $slush->{base} ) {
+        $url->base( _thaw_url( $slush->{base} ) );
+    }
+    return $url;
 }
 
 sub store {

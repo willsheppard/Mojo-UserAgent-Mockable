@@ -97,11 +97,6 @@ sub _compare_url {
     }
     $u2 = $u2->to_abs;
 
-    # Short-circuit all the detailed checking if they stringify identically
-    if ($u1->to_string eq $u2->to_string) {
-        return 1;
-    }
-
     no warnings qw/uninitialized/;
     for my $key (qw/scheme userinfo host port fragment/) {
         my $val1 = $u1->$key;
