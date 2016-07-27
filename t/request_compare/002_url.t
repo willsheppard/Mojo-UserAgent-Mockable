@@ -13,7 +13,7 @@ $r1->parse(qq{Connection: keep-alive\cM\cJ});
 $r1->parse(qq{X-Day: 8661\cM\cJ});
 $r1->parse(qq{Host: www.random.org\cM\cJ\cM\cJ});
 $r1->finish;
-
+$r1->url(Mojo::URL->new(q{https://random.org/integers/?num=5&min=0&max=1000000000&col=1&base=10&format=plain&quux=alpha})); 
 subtest 'Equivalent URL, different query order' => sub {
     my $compare = Mojo::UserAgent::Mockable::Request::Compare->new;
     my $r2 = $r1->clone;
@@ -54,6 +54,7 @@ subtest 'Extra params in query' => sub {
     like $compare->compare_result, qr/^URL query mismatch/, 'Compare result correct';
 };
 
+# FIXME: The tests are failing here but it's artificial. Something about the base and to_abs killing things
 subtest 'Other URL bits' => sub {
     for my $attr (qw/scheme userinfo host port fragment path/) {
         my $compare = Mojo::UserAgent::Mockable::Request::Compare->new;
