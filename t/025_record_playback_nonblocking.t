@@ -3,6 +3,8 @@ use 5.014;
 use Mojo::Util qw/slurp/;
 use File::Temp;
 use FindBin qw($Bin);
+use lib qq{$Bin/lib};
+use RandomOrgQuota qw/check_quota/;
 use Mojo::IOLoop;
 use Mojo::JSON qw(encode_json decode_json);
 use Mojo::UserAgent::Mockable;
@@ -48,6 +50,7 @@ my ( @results, @transactions );
     $mock->transactor->name('kit.peters@broadbean.com');
 
     for (1 .. $transaction_count) {
+        plan skip_all => 'Random.org quota exceeded' unless check_quota();
         $mock->get(
             $url->clone->query( [ quux => int rand 1e9 ] ),
             sub {

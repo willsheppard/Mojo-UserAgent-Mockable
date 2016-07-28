@@ -9,6 +9,9 @@ use Mojo::Message::Response;
 use Mojo::UserAgent::Mockable::Serializer;
 use Mojo::UserAgent::Mockable::Request::Compare;
 use Mojolicious::Quick;
+use FindBin qw($Bin);
+use lib qq{$Bin/../lib};
+use RandomOrgQuota qw/check_quota/;
 
 my $serializer = Mojo::UserAgent::Mockable::Serializer->new;
 
@@ -64,6 +67,7 @@ subtest 'random.org' => sub {
     } or plan skip_all => 'IO::Socket::SSL not installed';
 
     plan skip_all => qq{Minimum version of IO::Socket::SSL is 1.94 for this test, but you have $ver} if $ver < 1.94;
+    plan skip_all => 'Random.org quota exceeded' unless check_quota();
 
     my $dir = File::Temp->newdir;
     my $output_file = qq{$dir/random_org.json};
