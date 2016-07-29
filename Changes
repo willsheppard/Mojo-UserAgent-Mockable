@@ -1,5 +1,9 @@
 {{$NEXT}}
 
+- Addedm minimum Mojlicious version of 6. Renamed all numbered tests (save one) to unnumbered tests.
+
+1.41      2016-07-28 10:23:13-05:00 America/Chicago
+
 - Added quota checking for all calls to random.org. 
 
 1.40      2016-07-27 18:34:19-05:00 America/Chicago
