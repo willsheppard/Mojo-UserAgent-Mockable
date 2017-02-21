@@ -13,7 +13,6 @@ use Mojo::UserAgent::Mockable::Serializer;
 use Mojo::UserAgent::Mockable::Request::Compare;
 use Mojo::JSON;
 use Scalar::Util;
-use TryCatch;
 
 # ABSTRACT: A Mojo User-Agent that can record and play back requests without Internet connectivity, similar to LWP::UserAgent::Mockable
 

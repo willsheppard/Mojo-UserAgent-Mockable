@@ -1,15 +1,11 @@
 use 5.014;
 
-use File::Compare qw(compare);
-use Mojo::Util qw/slurp/;
 use File::Temp;
 use FindBin qw($Bin);
-use Mojo::JSON qw(encode_json decode_json);
 use Mojo::UserAgent::Mockable;
 use Mojolicious::Quick;
 use Test::Most;
 use Test::JSON;
-use TryCatch;
 
 use Time::HiRes qw/tv_interval gettimeofday/;
 
