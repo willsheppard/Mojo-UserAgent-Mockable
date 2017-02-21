@@ -7,7 +7,7 @@ use warnings::register;
 use Carp;
 use Class::Load ':all';
 use English qw/-no_match_vars/;
-use File::Slurper qw(write_text read_text);
+use Path::Tiny;
 use JSON::MaybeXS qw/encode_json decode_json/;
 use Mojo::Base 'Mojo::EventEmitter';
 use Safe::Isa (qw/$_isa/);
@@ -351,13 +351,13 @@ sub store {
     my ($self, $file, @transactions) = @_;
 
     my $serialized = $self->serialize(@transactions);
-    write_text($file, $serialized);
+    path($file)->spew_utf8($serialized);
 }
 
 sub retrieve {
     my ($self, $file) = @_;
 
-    my $contents = read_text($file);
+    my $contents = path($file)->slurp_utf8;
     return $self->deserialize($contents);
 }
 1;
