@@ -10,6 +10,14 @@ package Mojo::UserAgent::Mockable::Request::Compare;
 
 The result of the last compare operation.  It is only populated when two requests B<do not> match.
 
+=attr ignore_userinfo 
+
+Set this to a true value to ignore a mismatch in the L<userinfo|Mojo::URL/userinfo> portion of a transaction URL. Defaults to true.
+
+=attr ignore_body
+
+Set this to a true value to ignore a mismatch in the bodies of the two compared transactions
+
 =method compare
 
 Compare two instances of L<Mojo::Message::Request>.
@@ -24,6 +32,7 @@ use Safe::Isa qw{$_isa};
 has compare_result => '';
 has ignore_headers => sub { [] };
 has ignore_body => '';
+has ignore_userinfo => 1;
 
 sub compare {
     my ($self, $r1, $r2) = @_;
@@ -99,6 +108,9 @@ sub _compare_url {
 
     no warnings qw/uninitialized/;
     for my $key (qw/scheme userinfo host port fragment/) {
+        my $ignore = sprintf 'ignore_%s', $key;
+        next if $self->can($ignore) && $self->$ignore;
+
         my $val1 = $u1->$key;
         my $val2 = $u2->$key;
         if ($val1 ne $val2) {

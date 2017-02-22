@@ -175,6 +175,9 @@ sub serialize {
     my ( $self, @transactions ) = @_;
 
     my @serialized = map { $self->_serialize_tx($_) } @transactions;
+    for (0 .. $#serialized) {
+        $serialized[$_]->{txn_num} = $_;
+    }
     return encode_json( \@serialized );
 }
 
@@ -340,6 +343,9 @@ sub _deserialize_message {
 
 sub _thaw_url {
     my $slush = shift;
+    # FIXME: Temporary workaround
+    return Mojo::URL->new($slush) unless ref $slush;
+
     my $url   = Mojo::URL->new;
 
     for my $attr ( keys %{$slush} ) {

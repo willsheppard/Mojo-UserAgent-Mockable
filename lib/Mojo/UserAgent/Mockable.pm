@@ -9,6 +9,7 @@ use JSON::MaybeXS;
 use Mojolicious 6.0;
 use Mojo::Base 'Mojo::UserAgent';
 use Mojo::Util qw/secure_compare/;
+use Mojo::UserAgent::Mockable::Proxy;
 use Mojo::UserAgent::Mockable::Serializer;
 use Mojo::UserAgent::Mockable::Request::Compare;
 use Mojo::JSON;
@@ -351,7 +352,6 @@ has '_app' => sub {
 sub new {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
-
     my %comparator_args = (
         ignore_headers => 'all',
         ignore_body    => $self->ignore_body,
@@ -374,6 +374,10 @@ sub new {
         $self->_mode($self->mode);
     }
 
+    if ( $self->mode eq 'playback' ) {
+        $self->proxy(undef); 
+    }
+    
     if ($self->_mode ne 'passthrough' && !$self->file) {
         croak qq{Error: You must specify a recording file};
     }
@@ -388,6 +392,18 @@ sub new {
     }
 
     return $self;
+}
+
+sub proxy {
+    my $self = shift;
+    return $self->SUPER::proxy unless @_;
+
+    if ( $self->mode eq 'playback' ) {
+        return $self->SUPER::proxy( Mojo::UserAgent::Mockable::Proxy->new );
+    }
+    else {
+        return $self->SUPER::proxy(@_);
+    }
 }
 
 sub save {
@@ -419,6 +435,7 @@ sub _init_playback {
         croak qq{Playback file $file not found};
     }
     $self->{'_transactions'} = [ $self->_serializer->retrieve( $self->file ) ];
+    my $recorded_tx_count = scalar @{$self->{_transactions}};
 
     $self->server->app( $self->_app );
 
@@ -431,6 +448,7 @@ sub _init_playback {
             my $recorded_tx  = shift @{ $self->{'_transactions'} };
 
             my ($this_req, $recorded_req) = $self->_normalized_req( $tx, $recorded_tx );
+
             if ( $self->comparator->compare( $this_req, $recorded_req ) ) {
                 $self->_current_txn($recorded_tx);
                 
@@ -488,12 +506,21 @@ sub _init_record {
         start => sub {
             my $tx = $_[1];
 
+            if ($tx->req->proxy) { 
+            # HTTP CONNECT - used for proxy
+                return if $tx->req->method eq 'CONNECT';
+                # If the TX has a connection assigned, then the request is a copy of the request
+                # that initiated the proxy connection
+                return if $tx->connection; 
+            }
+
             $tx->once(
                 finish => sub {
-                    my $tx  = shift;
+                    my $tx  = shift; 
                     push @{ $self->{'_transactions'} }, $tx;
-                }
+                },
             );
+            1;
         },
     );
 
@@ -504,7 +531,6 @@ sub _load_transactions {
     my ($self) = @_;
 
     my @transactions = $self->_serializer->retrieve($self->file);
-
     return \@transactions;
 }
 
