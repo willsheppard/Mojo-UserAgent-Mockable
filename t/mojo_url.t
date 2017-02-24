@@ -10,7 +10,6 @@ use Mojo::UserAgent::Mockable;
 use Mojolicious::Quick;
 use Test::Most;
 use Test::Mojo;
-use TryCatch;
 
 my $ver;
 eval { 

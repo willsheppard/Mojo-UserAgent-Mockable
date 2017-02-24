@@ -7,11 +7,11 @@ use warnings::register;
 use Carp;
 use Class::Load ':all';
 use English qw/-no_match_vars/;
-use File::Slurper qw(write_text read_text);
+use Path::Tiny;
 use JSON::MaybeXS qw/encode_json decode_json/;
 use Mojo::Base 'Mojo::EventEmitter';
 use Safe::Isa (qw/$_isa/);
-use TryCatch;
+use Try::Tiny;
 
 # ABSTRACT: A class that serializes Mojo transactions created by Mojo::UserAgent::Mockable.
 
@@ -172,32 +172,35 @@ File containing serialized object
 =cut
 
 sub serialize {
-    my ($self, @transactions) = @_;
+    my ( $self, @transactions ) = @_;
 
     my @serialized = map { $self->_serialize_tx($_) } @transactions;
-    return encode_json(\@serialized);
+    for (0 .. $#serialized) {
+        $serialized[$_]->{txn_num} = $_;
+    }
+    return encode_json( \@serialized );
 }
 
 sub _serialize_tx {
-    my ($self, $transaction) = @_;
+    my ( $self, $transaction ) = @_;
 
-    if (!$transaction->$_isa('Mojo::Transaction')) {
+    if ( !$transaction->$_isa('Mojo::Transaction') ) {
         croak q{Only instances of Mojo::Transaction may be serialized using this class};
     }
 
     $transaction->emit('pre_freeze');
     my $slush = {
-        request => $self->_serialize_message($transaction->req),
-        response => $self->_serialize_message($transaction->res),
-        class => ref $transaction,
+        request  => $self->_serialize_message( $transaction->req ),
+        response => $self->_serialize_message( $transaction->res ),
+        class    => ref $transaction,
     };
-    for my $event (keys %{$transaction->{'events'}}) {
+    for my $event ( keys %{ $transaction->{'events'} } ) {
         next if $event eq 'pre_freeze' or $event eq 'post_freeze' or $event eq 'resume';
-        carp(qq{Subscriber for event "$event" not serialized}) if warnings::enabled; 
-        push @{$slush->{'events'}}, $event;
+        carp(qq{Subscriber for event "$event" not serialized}) if warnings::enabled;
+        push @{ $slush->{'events'} }, $event;
     }
 
-    $transaction->emit('post_freeze', $slush);
+    $transaction->emit( 'post_freeze', $slush );
 
     return $slush;
 }
@@ -211,7 +214,7 @@ sub _serialize_message {
         body  => $message->to_string,
     };
     if ( $message->can('url') ) {
-        $slush->{url} = _freeze_url($message->url);
+        $slush->{url} = _freeze_url( $message->url );
     }
     for my $event ( keys %{ $message->{'events'} } ) {
         next if $event eq 'pre_freeze' or $event eq 'post_freeze';
@@ -219,7 +222,7 @@ sub _serialize_message {
         push @{ $slush->{'events'} }, $event;
     }
 
-    $message->emit('post_freeze', $slush);
+    $message->emit( 'post_freeze', $slush );
     return $slush;
 }
 
@@ -238,66 +241,70 @@ sub _freeze_url {
     return $slush;
 }
 
-sub deserialize { 
-    my ($self, $frozen) = @_;
+sub deserialize {
+    my ( $self, $frozen ) = @_;
 
     my $slush = decode_json($frozen);
 
-    if (ref $slush ne 'ARRAY') {
+    if ( ref $slush ne 'ARRAY' ) {
         croak q{Invalid serialized data: not stored as array.};
     }
-    $self->emit('pre_thaw', $slush);
+    $self->emit( 'pre_thaw', $slush );
 
     my @transactions;
-    for (0 .. $#{$slush}) {
+    for my $tx_num ( 0 .. $#{$slush} ) {
         my $tx;
         try {
-            $tx = $self->_deserialize_tx($slush->[$_]);
+            $tx = $self->_deserialize_tx( $slush->[$tx_num] );
         }
         catch {
-            my $tx_num = $_ + 1;
-            croak qq{Error deserializing transaction $tx_num: $EVAL_ERROR};
-        }
+            my $tx_num = ( $tx_num + 1 );
+            croak qq{Error deserializing transaction $tx_num: $_};
+        };
 
         push @transactions, $tx;
     }
 
-    $self->emit('post_thaw', \@transactions, $slush);
+    $self->emit( 'post_thaw', \@transactions, $slush );
     return @transactions;
 }
 
 sub _deserialize_tx {
-    my ($self, $slush) = @_;
+    my ( $self, $slush ) = @_;
 
     for my $key (qw/class request response/) {
-        if (!defined $slush->{$key}) {
+        if ( !defined $slush->{$key} ) {
             croak qq{Invalid serialized data: Missing required key '$key'};
         }
     }
 
-    load_class($slush->{'class'});
+    load_class( $slush->{'class'} );
     my $obj = $slush->{'class'}->new();
 
-    if (!$obj->$_isa('Mojo::Transaction')) {
+    if ( !$obj->$_isa('Mojo::Transaction') ) {
         croak q{Only instances of Mojo::Transaction may be deserialized using this class};
     }
 
+    my $response;
     try {
-        $obj->res($self->_deserialize_message($slush->{'response'}));
-    }
-    catch { 
-        die qq{Error deserializing response: $EVAL_ERROR\n};
-    }
-
-    try {
-        $obj->req($self->_deserialize_message($slush->{'request'}));
+        $response = $self->_deserialize_message( $slush->{response} );
     }
     catch {
-        die qq{Error deserializing request: $EVAL_ERROR\n};
-    }
+        die qq{Response deserialization failed: $_\n};
+    };
+    $obj->res($response);
 
-    if ($slush->{'events'}) {
-        for my $event (@{$slush->{'events'}}) {
+    my $request;
+    try {
+        $request = $self->_deserialize_message( $slush->{request} );
+    }
+    catch {
+        die qq{Request deserialization failed: $_\n};
+    };
+    $obj->req($request);
+
+    if ( $slush->{'events'} ) {
+        for my $event ( @{ $slush->{'events'} } ) {
             $obj->emit($event);
         }
     }
@@ -318,12 +325,12 @@ sub _deserialize_message {
         $obj->url( _thaw_url( $slush->{url} ) );
     }
     if ( !$obj->can('parse') ) {
-        die qq{Messages must define the 'parse' method\n};
+        die qq{Message class "$slush->{class}" must define the 'parse' method\n};
     }
     $obj->parse( $slush->{'body'} );
 
     if ( !$obj->can('emit') ) {
-        die qq{Messages must define the 'emit' method\n};
+        die qq{Message class "$slush->{class}" must define the 'emit' method\n};
     }
     if ( $slush->{'events'} ) {
         for my $event ( @{ $slush->{'events'} } ) {
@@ -336,6 +343,9 @@ sub _deserialize_message {
 
 sub _thaw_url {
     my $slush = shift;
+    # FIXME: Temporary workaround
+    return Mojo::URL->new($slush) unless ref $slush;
+
     my $url   = Mojo::URL->new;
 
     for my $attr ( keys %{$slush} ) {
@@ -348,16 +358,16 @@ sub _thaw_url {
 }
 
 sub store {
-    my ($self, $file, @transactions) = @_;
+    my ( $self, $file, @transactions ) = @_;
 
     my $serialized = $self->serialize(@transactions);
-    write_text($file, $serialized);
+    path($file)->spew_utf8($serialized);
 }
 
 sub retrieve {
-    my ($self, $file) = @_;
+    my ( $self, $file ) = @_;
 
-    my $contents = read_text($file);
+    my $contents = path($file)->slurp_utf8;
     return $self->deserialize($contents);
 }
 1;

@@ -11,7 +11,6 @@ use Mojolicious::Plugin::BasicAuthPlus;
 
 use Test::Most;
 use Test::Mojo;
-use TryCatch;
 
 my $app = Mojolicious->new;
 
