@@ -1,8 +1,12 @@
 {{$NEXT}}
 
+- Sessions going through a CONNECT proxy can now be played back properly (issue #9). 
+- Added option to disable userinfo comparision
+- Mojo::Util::slurp has been removed in favor of Path::Tiny::slurp in tests
+
 1.42      2016-07-29 10:35:40-05:00 America/Chicago
 
-- Addedm minimum Mojlicious version of 6. Renamed all numbered tests (save one) to unnumbered tests.
+- Added minimum Mojlicious version of 6. Renamed all numbered tests (save one) to unnumbered tests.
 
 1.41      2016-07-28 10:23:13-05:00 America/Chicago
 

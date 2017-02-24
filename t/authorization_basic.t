@@ -1,6 +1,5 @@
 use 5.014;
 
-use Mojo::Util qw/slurp/;
 use File::Temp;
 use FindBin qw($Bin);
 use Mojo::IOLoop;
