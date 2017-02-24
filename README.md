@@ -4,7 +4,7 @@ Mojo::UserAgent::Mockable - A Mojo User-Agent that can record and play back requ
 
 # VERSION
 
-version 1.50
+version 1.51
 
 # SYNOPSIS
 
@@ -72,6 +72,10 @@ playback mode. Specify 'all' to remove any headers from consideration. By defaul
 
 Ignore the request body entirely when comparing a request made with this class to a stored request 
 in playback mode.
+
+## ignore\_userinfo 
+
+Ignore the userinfo portion of the request URL's when comparing a request to a potential counterpart in playback mode.
 
 ## request\_normalizer
 
