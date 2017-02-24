@@ -1,5 +1,4 @@
 use 5.014;
-use Mojo::Util qw(slurp);
 use File::Temp;
 use Test::Most;
 use Test::JSON;
@@ -9,6 +8,7 @@ use Mojo::Message::Response;
 use Mojo::UserAgent::Mockable::Serializer;
 use Mojo::UserAgent::Mockable::Request::Compare;
 use Mojolicious::Quick;
+use Path::Tiny;
 use FindBin qw($Bin);
 use lib qq{$Bin/../lib};
 use RandomOrgQuota qw/check_quota/;
@@ -115,7 +115,7 @@ sub test_transactions {
 
     lives_ok { $serializer->store($output_file, @transactions) } q{serialize() did not die};
 
-    my $serialized = slurp $output_file;
+    my $serialized = path($output_file)->slurp_raw;
     is_valid_json($serialized, q{Serializer outputs valid JSON});
 
     my $decoded = Mojo::JSON::decode_json($serialized);

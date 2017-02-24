@@ -72,6 +72,10 @@ playback mode. Specify 'all' to remove any headers from consideration. By defaul
 Ignore the request body entirely when comparing a request made with this class to a stored request 
 in playback mode.
 
+=attr ignore_userinfo 
+
+Ignore the userinfo portion of the request URL's when comparing a request to a potential counterpart in playback mode.
+
 =attr request_normalizer
 
 Optional subref. This is for when the requests require a more nuanced comparison (although it will
@@ -314,6 +318,7 @@ has '_serializer' => sub { Mojo::UserAgent::Mockable::Serializer->new };
 has 'comparator';
 has 'ignore_headers' => sub { [] };
 has 'ignore_body';
+has 'ignore_userinfo';
 has '_mode';
 has '_current_txn';
 has '_compare_result';
@@ -350,42 +355,43 @@ has '_app' => sub {
 };
 
 sub new {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
+    my $class           = shift;
+    my $self            = $class->SUPER::new(@_);
     my %comparator_args = (
-        ignore_headers => 'all',
-        ignore_body    => $self->ignore_body,
+        ignore_headers  => 'all',
+        ignore_body     => $self->ignore_body,
+        ignore_userinfo => $self->ignore_userinfo,
     );
     $self->comparator( Mojo::UserAgent::Mockable::Request::Compare->new(%comparator_args) );
 
     $self->{'_launchpid'} = $$;
-    if ($self->mode eq 'lwp-ua-mockable') {
-        $self->_mode($ENV{'LWP_UA_MOCK'});
-        if ($self->file) {
-            croak qq{Do not specify 'file' when 'mode' is set to 'lwp-ua-mockable'. Use the LWP_UA_MOCK_FILE } 
-                 . q{environment var instead.};
+    if ( $self->mode eq 'lwp-ua-mockable' ) {
+        $self->_mode( $ENV{'LWP_UA_MOCK'} );
+        if ( $self->file ) {
+            croak qq{Do not specify 'file' when 'mode' is set to 'lwp-ua-mockable'. Use the LWP_UA_MOCK_FILE }
+                . q{environment var instead.};
         }
-        $self->file($ENV{'LWP_UA_MOCK_FILE'});
+        $self->file( $ENV{'LWP_UA_MOCK_FILE'} );
     }
-    elsif ($self->mode ne 'record' && $self->mode ne 'playback' && $self->mode ne 'passthrough') {
+    elsif ( $self->mode ne 'record' && $self->mode ne 'playback' && $self->mode ne 'passthrough' ) {
         croak q{Invalid mode. Must be one of 'lwp-ua-mockable', 'record', 'playback', or 'passthrough'};
     }
     else {
-        $self->_mode($self->mode);
+        $self->_mode( $self->mode );
     }
 
     if ( $self->mode eq 'playback' ) {
-        $self->proxy(undef); 
+        $self->proxy(undef);
     }
-    
-    if ($self->_mode ne 'passthrough' && !$self->file) {
+
+    if ( $self->_mode ne 'passthrough' && !$self->file ) {
         croak qq{Error: You must specify a recording file};
     }
 
-    if ($self->_mode ne 'passthrough') {
-        my $mode = lc $self->_mode;
-        my $mode_init = qq{_init_$mode}; 
-        if (!$self->can($mode_init)) {
+    if ( $self->_mode ne 'passthrough' ) {
+        my $mode      = lc $self->_mode;
+        my $mode_init = qq{_init_$mode};
+        if ( !$self->can($mode_init) ) {
             croak qq{Error: unsupported mode "$mode"};
         }
         return $self->$mode_init;
@@ -412,7 +418,7 @@ sub save {
         $file ||= $self->file;
 
         my $transactions = $self->{'_transactions'};
-        $self->_serializer->store($file, @{$transactions});
+        $self->_serializer->store( $file, @{$transactions} );
     }
     else {
         carp 'save() only works in record mode' if warnings::enabled;
@@ -430,12 +436,12 @@ sub start {
 sub _init_playback {
     my $self = shift;
 
-    if (! -e $self->file ) {
+    if ( !-e $self->file ) {
         my $file = $self->file;
         croak qq{Playback file $file not found};
     }
     $self->{'_transactions'} = [ $self->_serializer->retrieve( $self->file ) ];
-    my $recorded_tx_count = scalar @{$self->{_transactions}};
+    my $recorded_tx_count = scalar @{ $self->{_transactions} };
 
     $self->server->app( $self->_app );
 
@@ -444,19 +450,19 @@ sub _init_playback {
         start => sub {
             my ( $ua, $tx ) = @_;
 
-            my $port         = $self->_non_blocking ? $self->server->nb_url->port : $self->server->url->port;
-            my $recorded_tx  = shift @{ $self->{'_transactions'} };
+            my $port = $self->_non_blocking ? $self->server->nb_url->port : $self->server->url->port;
+            my $recorded_tx = shift @{ $self->{'_transactions'} };
 
-            my ($this_req, $recorded_req) = $self->_normalized_req( $tx, $recorded_tx );
+            my ( $this_req, $recorded_req ) = $self->_normalized_req( $tx, $recorded_tx );
 
             if ( $self->comparator->compare( $this_req, $recorded_req ) ) {
                 $self->_current_txn($recorded_tx);
-                
-                $tx->req->url($tx->req->url->clone);
+
+                $tx->req->url( $tx->req->url->clone );
                 $tx->req->url->host('')->scheme('')->port($port);
             }
             else {
-                unshift @{$self->{'_transactions'}}, $recorded_tx;
+                unshift @{ $self->{'_transactions'} }, $recorded_tx;
 
                 my $result = $self->comparator->compare_result;
                 $self->_current_txn(undef);
@@ -486,16 +492,16 @@ sub _init_playback {
 
 sub _normalized_req {
     my $self = shift;
-    my ($tx, $recorded_tx) = @_;
+    my ( $tx, $recorded_tx ) = @_;
 
     my $request_normalizer = $self->request_normalizer or return ( $tx->req, $recorded_tx->req );
     croak("The request_normalizer attribute is not a coderef") if ( ref($request_normalizer) ne "CODE" );
 
     my $req          = $tx->req->clone;
     my $recorded_req = $recorded_tx->req->clone;
-    $request_normalizer->( $req, $recorded_req ); # To be modified in-place
+    $request_normalizer->( $req, $recorded_req );    # To be modified in-place
 
-    return ($req, $recorded_req);
+    return ( $req, $recorded_req );
 }
 
 sub _init_record {
@@ -506,17 +512,19 @@ sub _init_record {
         start => sub {
             my $tx = $_[1];
 
-            if ($tx->req->proxy) { 
-            # HTTP CONNECT - used for proxy
+            if ( $tx->req->proxy ) {
+
+                # HTTP CONNECT - used for proxy
                 return if $tx->req->method eq 'CONNECT';
+
                 # If the TX has a connection assigned, then the request is a copy of the request
                 # that initiated the proxy connection
-                return if $tx->connection; 
+                return if $tx->connection;
             }
 
             $tx->once(
                 finish => sub {
-                    my $tx  = shift; 
+                    my $tx = shift;
                     push @{ $self->{'_transactions'} }, $tx;
                 },
             );
@@ -530,16 +538,16 @@ sub _init_record {
 sub _load_transactions {
     my ($self) = @_;
 
-    my @transactions = $self->_serializer->retrieve($self->file);
+    my @transactions = $self->_serializer->retrieve( $self->file );
     return \@transactions;
 }
 
-# In record mode, write out the recorded file 
- sub DESTROY { 
-     my $self = shift;
- 
-     if ($self->_mode eq 'record') {
-         $self->save($self->file);
-     }
- }
+# In record mode, write out the recorded file
+sub DESTROY {
+    my $self = shift;
+
+    if ( $self->_mode eq 'record' ) {
+        $self->save( $self->file );
+    }
+}
 1;

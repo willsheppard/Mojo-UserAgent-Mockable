@@ -12,7 +12,7 @@ The result of the last compare operation.  It is only populated when two request
 
 =attr ignore_userinfo 
 
-Set this to a true value to ignore a mismatch in the L<userinfo|Mojo::URL/userinfo> portion of a transaction URL. Defaults to true.
+Set this to a true value to ignore a mismatch in the L<userinfo|Mojo::URL/userinfo> portion of a transaction URL.
 
 =attr ignore_body
 
@@ -32,7 +32,7 @@ use Safe::Isa qw{$_isa};
 has compare_result => '';
 has ignore_headers => sub { [] };
 has ignore_body => '';
-has ignore_userinfo => 1;
+has ignore_userinfo => '';
 
 sub compare {
     my ($self, $r1, $r2) = @_;
