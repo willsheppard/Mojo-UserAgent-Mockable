@@ -1,5 +1,9 @@
 {{$NEXT}}
 
+- Fixed dependencies screwed up in v1.52
+
+1.52      2017-02-27 10:21:36-06:00 America/Chicago
+
 - Updated dependencies - no functional changes
 
 1.51      2017-02-24 14:49:29-06:00 America/Chicago
