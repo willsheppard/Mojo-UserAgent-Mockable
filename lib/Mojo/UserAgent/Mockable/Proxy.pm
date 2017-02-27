@@ -1,6 +1,9 @@
 use 5.016;
 
+# ABSTRACT: Proxy class for Mojo::UserAgent::Mockable that will not set any proxy.
+
 package Mojo::UserAgent::Mockable::Proxy;
+
 use Mojo::Base 'Mojo::UserAgent::Proxy';
 
 1;
