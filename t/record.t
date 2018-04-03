@@ -13,7 +13,7 @@ push @transactions, Mojo::UserAgent->new->get(q{https://www.vam.ac.uk/api/json/m
 
 my @results = map { $_->res->json } @transactions;
 
-BAIL_OUT('Museum API not responding properly') unless $results[0]->[0]->{'pk'};
+plan skip_all => 'Museum API not responding properly' unless $results[0]->[0]->{'pk'};
 
 my $output_file = qq{$dir/victoria_and_albert.json};
 
