@@ -294,6 +294,8 @@ Where the magic happens
 
 =head1 CONTRIBUTORS
 
+Marc Murray L<https://github.com/marcmurray>
+
 Steve Wagner C<< <truroot at gmail.com> >>
 
 Joel Berger C<< <joel.a.berger at gmail.com> >>
