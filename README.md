@@ -287,7 +287,7 @@ The following transaction level events will not be emitted during playback:
 
 - [Mojo::UserAgent](https://metacpan.org/pod/Mojo::UserAgent) 
 The class being mocked (but not derided, because the whole Mojo thing is really quite clever)
-- \* [Mojo::Transaction::HTTP](https://metacpan.org/pod/Mojo::Transaction::HTTP) 
+- [Mojo::Transaction::HTTP](https://metacpan.org/pod/Mojo::Transaction::HTTP) 
 Where the magic happens
 
 # CONTRIBUTORS
