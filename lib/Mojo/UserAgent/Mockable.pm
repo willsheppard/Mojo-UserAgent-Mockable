@@ -276,9 +276,9 @@ You can also do the following (as seen in t/030_basic_authentication.t):
 The following transaction level events will not be emitted during playback:
 
 =for :list
-=item pre_freeze
-=item post_freeze
-=item resume
+= pre_freeze
+= post_freeze
+= resume
 
 =method save
 
@@ -287,9 +287,9 @@ In record mode, save the transaction cache to the file specified by L</file> for
 =head1 SEE ALSO
 
 =for :list
-=item * L<Mojo::UserAgent> 
+= * L<Mojo::UserAgent>
 The class being mocked (but not derided, because the whole Mojo thing is really quite clever)
-=item * L<Mojo::Transaction::HTTP> 
+= * L<Mojo::Transaction::HTTP>
 Where the magic happens
 
 =head1 CONTRIBUTORS
